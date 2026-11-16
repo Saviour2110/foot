@@ -4,6 +4,10 @@ import { Html } from '@react-three/drei'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import * as THREE from 'three'
 
+// Preload both real scanned models for instant switching
+useLoader.preload(STLLoader, '/models/human_foot.stl')
+useLoader.preload(STLLoader, '/models/human_foot_flat.stl')
+
 // Helper for photorealistic PBR metals
 function useMetal(color, metalness = 0.88, roughness = 0.22) {
   return useMemo(() => new THREE.MeshStandardMaterial({
@@ -109,12 +113,21 @@ function AnatomicalFootMesh({ footType = 'healthy' }) {
         g = THREE.MathUtils.lerp(g, 0.62, factor * 0.6)
         b = THREE.MathUtils.lerp(b, 0.56, factor * 0.6)
       }
-      // 4. Medial Longitudinal Arch (delicate paler skin tone)
+      // 4. Medial Longitudinal Arch / Navicular Bulge
       else if (x > -0.25 && x < 0.35 && z > 0.04 && y < 0.38) {
-        const factor = Math.min(1, Math.max(0, z / 0.22))
-        r = THREE.MathUtils.lerp(r, 0.94, factor * 0.4)
-        g = THREE.MathUtils.lerp(g, 0.78, factor * 0.4)
-        b = THREE.MathUtils.lerp(b, 0.72, factor * 0.4)
+        if (isFlat) {
+          // Collapsed flat arch with biological weight-bearing flush
+          const factor = Math.min(1, Math.max(0, z / 0.22))
+          r = THREE.MathUtils.lerp(r, 0.93, factor * 0.5)
+          g = THREE.MathUtils.lerp(g, 0.62, factor * 0.5)
+          b = THREE.MathUtils.lerp(b, 0.56, factor * 0.5)
+        } else {
+          // High athletic arch with clear delicate skin
+          const factor = Math.min(1, Math.max(0, z / 0.22))
+          r = THREE.MathUtils.lerp(r, 0.94, factor * 0.4)
+          g = THREE.MathUtils.lerp(g, 0.78, factor * 0.4)
+          b = THREE.MathUtils.lerp(b, 0.72, factor * 0.4)
+        }
       }
       // 5. Achilles Tendon Ridge (rear heel vertical tendon highlight)
       else if (x < -0.38 && y > 0.32 && Math.abs(z) < 0.05) {
@@ -130,7 +143,7 @@ function AnatomicalFootMesh({ footType = 'healthy' }) {
 
     geom.setAttribute('color', new THREE.BufferAttribute(colors, 3))
     return geom
-  }, [rawGeometry])
+  }, [rawGeometry, isFlat])
 
   // Realistic human skin physical material with biological dermal sheen
   const skinMaterial = useMemo(() => {
@@ -141,9 +154,9 @@ function AnatomicalFootMesh({ footType = 'healthy' }) {
       clearcoat: 0.22,
       clearcoatRoughness: 0.35,
       sheen: 0.38,
-      sheenColor: new THREE.Color('#fca5a5'), // soft subcutaneous biological rim glow
+      sheenColor: new THREE.Color(isFlat ? '#f87171' : '#fca5a5'), // soft subcutaneous biological rim glow
     })
-  }, [])
+  }, [isFlat])
 
   return (
     <group position={[0, 0, 0]}>
@@ -157,24 +170,24 @@ function AnatomicalFootMesh({ footType = 'healthy' }) {
 
       {/* Ergonomic Padded Restraint Straps with Aluminum Buckles */}
       {/* Forefoot strap */}
-      <group position={[0.22, 0.28, 0]}>
+      <group position={[0.22, 0.28, isFlat ? 0.02 : 0]}>
         <mesh castShadow>
-          <boxGeometry args={[0.09, 0.14, 0.38]} />
+          <boxGeometry args={[0.09, 0.14, 0.40]} />
           <meshStandardMaterial color="#0f766e" roughness={0.65} metalness={0.1} />
         </mesh>
-        <mesh position={[0, 0.08, 0.16]} castShadow>
+        <mesh position={[0, 0.08, 0.17]} castShadow>
           <boxGeometry args={[0.07, 0.03, 0.04]} />
           <meshStandardMaterial color="#cbd5e1" metalness={0.94} roughness={0.18} />
         </mesh>
       </group>
 
       {/* Instep / Ankle strap */}
-      <group position={[-0.20, 0.38, 0]} rotation={[0, 0, 0.38]}>
+      <group position={[-0.20, isFlat ? 0.36 : 0.38, isFlat ? -0.03 : 0]} rotation={[isFlat ? -0.12 : 0, 0, 0.38]}>
         <mesh castShadow>
-          <boxGeometry args={[0.09, 0.18, 0.36]} />
+          <boxGeometry args={[0.09, 0.18, 0.38]} />
           <meshStandardMaterial color="#0f766e" roughness={0.65} metalness={0.1} />
         </mesh>
-        <mesh position={[0, 0.1, 0.15]} castShadow>
+        <mesh position={[0, 0.1, 0.16]} castShadow>
           <boxGeometry args={[0.07, 0.03, 0.04]} />
           <meshStandardMaterial color="#cbd5e1" metalness={0.94} roughness={0.18} />
         </mesh>
@@ -474,6 +487,52 @@ export default function MechanismScene({
                 <boxGeometry args={[1.65, 0.012, 0.85]} />
               </mesh>
 
+              {/* Dynamic Biomechanical Plantar Contact Pattern */}
+              {footType === 'healthy' ? (
+                <group position={[0, 0.2115, 0]}>
+                  {/* Calcaneus Heel Contact Pad (Isolated) */}
+                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.28, 0, 0.01]}>
+                    <ringGeometry args={[0.04, 0.14, 32]} />
+                    <meshBasicMaterial color="#2dd4bf" transparent opacity={0.35} />
+                  </mesh>
+                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.28, 0, 0.01]}>
+                    <circleGeometry args={[0.10, 32]} />
+                    <meshBasicMaterial color="#14b8a6" transparent opacity={0.45} />
+                  </mesh>
+                  {/* Metatarsal Heads & Ball Contact (Isolated) */}
+                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.46, 0, 0.04]}>
+                    <circleGeometry args={[0.18, 32]} />
+                    <meshBasicMaterial color="#14b8a6" transparent opacity={0.4} />
+                  </mesh>
+                  {/* Narrow Lateral Border Contact */}
+                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.08, 0, -0.10]}>
+                    <planeGeometry args={[0.42, 0.06]} />
+                    <meshBasicMaterial color="#0d9488" transparent opacity={0.32} />
+                  </mesh>
+                </group>
+              ) : (
+                <group position={[0, 0.2115, 0]}>
+                  {/* Continuous Full-Contact Fallen Arch Pattern (Amber/Warning) */}
+                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.06, 0, 0.04]}>
+                    <planeGeometry args={[0.92, 0.36]} />
+                    <meshBasicMaterial color="#f59e0b" transparent opacity={0.30} />
+                  </mesh>
+                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.26, 0, 0.02]}>
+                    <circleGeometry args={[0.16, 32]} />
+                    <meshBasicMaterial color="#d97706" transparent opacity={0.45} />
+                  </mesh>
+                  {/* Dropped Medial Arch Contact Patch */}
+                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.08, 0, 0.12]}>
+                    <circleGeometry args={[0.14, 32]} />
+                    <meshBasicMaterial color="#f59e0b" transparent opacity={0.5} />
+                  </mesh>
+                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.46, 0, 0.06]}>
+                    <circleGeometry args={[0.20, 32]} />
+                    <meshBasicMaterial color="#d97706" transparent opacity={0.45} />
+                  </mesh>
+                </group>
+              )}
+
               {/* Platform Bevel Perimeter Trim */}
               <mesh material={trimTeal} position={[0, 0.198, 0]}>
                 <boxGeometry args={[1.73, 0.004, 0.93]} />
@@ -499,17 +558,50 @@ export default function MechanismScene({
               {/* REALISTIC SCANNED ANATOMICAL HUMAN FOOT MODEL */}
               {showFoot && (
                 <Suspense fallback={null}>
-                  <AnatomicalFootMesh footType={footType} />
+                  <AnatomicalFootMesh key={footType} footType={footType} />
                 </Suspense>
               )}
 
               {showLabels && (
-                <Label
-                  position={[0, 0.58, 0]}
-                  text="FOOT REST PLATFORM"
-                  subtext="Padded base with safety straps"
-                  color="#14b8a6"
-                />
+                <>
+                  <Label
+                    position={[0, 0.58, 0]}
+                    text="FOOT REST PLATFORM"
+                    subtext="Padded base with safety straps"
+                    color="#14b8a6"
+                  />
+                  {footType === 'healthy' ? (
+                    <>
+                      <Label
+                        position={[0.08, 0.42, 0.24]}
+                        text="HIGH MEDIAL ARCH"
+                        subtext="Natural shock absorption gap (0.12m clearance)"
+                        color="#14b8a6"
+                      />
+                      <Label
+                        position={[-0.25, 0.65, 0]}
+                        text="NEUTRAL ANKLE"
+                        subtext="Upright vertical alignment (0°)"
+                        color="#14b8a6"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <Label
+                        position={[0.08, 0.28, 0.32]}
+                        text="FALLEN MEDIAL ARCH"
+                        subtext="Complete floor contact & navicular sag"
+                        color="#f59e0b"
+                      />
+                      <Label
+                        position={[-0.25, 0.65, -0.06]}
+                        text="PRONATED ANKLE (VALGUS)"
+                        subtext="Inward eversion tilt (-8.5°)"
+                        color="#f59e0b"
+                      />
+                    </>
+                  )}
+                </>
               )}
             </group>
           </group>

@@ -136,13 +136,7 @@ export default function App() {
         <div className="segmented-selector">
           <button
             className={`segmented-tab ${selectedFootType === 'healthy' ? 'active-healthy' : ''}`}
-            onClick={() => {
-              setSelectedFootType('healthy')
-              setAutoAnimate(false)
-              setRotation(0)
-              setTilt(0)
-              setHeight(10)
-            }}
+            onClick={() => setSelectedFootType('healthy')}
           >
             <span className="dot-indicator healthy" />
             <span>Healthy Foot</span>
@@ -150,13 +144,7 @@ export default function App() {
 
           <button
             className={`segmented-tab ${selectedFootType === 'flat_foot' ? 'active-flat' : ''}`}
-            onClick={() => {
-              setSelectedFootType('flat_foot')
-              setAutoAnimate(false)
-              setRotation(-4)
-              setTilt(2)
-              setHeight(12)
-            }}
+            onClick={() => setSelectedFootType('flat_foot')}
           >
             <span className="dot-indicator flat" />
             <span>Flat Foot</span>

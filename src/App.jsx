@@ -5,31 +5,13 @@ import {
   RotateCw, ArrowUpDown, MoveVertical, Settings2,
   Play, Pause, RotateCcw,
   Eye, EyeOff, Compass,
-  Layers, Stethoscope
+  Layers
 } from 'lucide-react'
 import MechanismScene from './components/MechanismScene'
 import './index.css'
 
 /* =========================================================
-   FOOT TYPES (HEALTHY & FLAT FOOT)
-   ========================================================= */
-const FOOT_PROFILES = {
-  healthy: {
-    id: 'healthy',
-    name: 'Healthy Foot',
-    badgeColor: '#14b8a6',
-    recommendedMotion: { rotation: 0, tilt: 0, height: 10 }
-  },
-  flat_foot: {
-    id: 'flat_foot',
-    name: 'Flat Foot',
-    badgeColor: '#f59e0b',
-    recommendedMotion: { rotation: -4, tilt: 2, height: 12 }
-  }
-}
-
-/* =========================================================
-   MOTION PRESETS
+   GAIT MOTION PRESETS
    ========================================================= */
 const GAIT_PRESETS = [
   { name: 'Neutral Stance', rot: 0, tilt: 0, h: 0 },
@@ -46,11 +28,11 @@ export default function App() {
   const [tilt, setTilt] = useState(0)         // -10 to +10 deg (Pitch)
   const [height, setHeight] = useState(10)    // 0 to 30 mm (Z-elevation)
 
-  // Visualization options: Labels are OFF by default as requested
+  // Visualization options (Labels OFF by default)
   const [showFoot, setShowFoot] = useState(true)
   const [showLabels, setShowLabels] = useState(false)
 
-  // Foot morphology: Healthy vs Flat Foot
+  // Foot morphology: Healthy Foot vs Flat Foot
   const [selectedFootType, setSelectedFootType] = useState('healthy')
 
   // Animation state
@@ -122,77 +104,73 @@ export default function App() {
   return (
     <div className="single-page-app">
       {/* =========================================================
-          TOP NAVIGATION & FOOT TYPE SELECTOR
+          TOP HEADER
           ========================================================= */}
       <header className="app-header">
         <div className="header-brand">
-          <div className="brand-icon">
-            <Stethoscope size={20} className="icon-pulse" />
-          </div>
-          <div className="brand-text">
-            <h1>Foot Mechanics</h1>
-            <span className="brand-tag">3D Kinematics Studio</span>
-          </div>
+          <h1 className="brand-title">Foot Mechanics</h1>
         </div>
 
-        {/* Foot Condition Selector: Healthy and Flat Foot only */}
+        {/* Foot Condition Segmented Selector: Healthy Foot & Flat Foot */}
         <div className="foot-type-selector">
-          {Object.values(FOOT_PROFILES).map((item) => {
-            const isSelected = selectedFootType === item.id
-            return (
-              <button
-                key={item.id}
-                className={`foot-tab-btn ${isSelected ? 'active' : ''}`}
-                onClick={() => {
-                  setSelectedFootType(item.id)
-                  setAutoAnimate(false)
-                  setRotation(item.recommendedMotion.rotation)
-                  setTilt(item.recommendedMotion.tilt)
-                  setHeight(item.recommendedMotion.height)
-                }}
-                style={{
-                  '--accent-color': item.badgeColor
-                }}
-              >
-                <span
-                  className="foot-tab-dot"
-                  style={{ backgroundColor: item.badgeColor }}
-                />
-                <span className="foot-tab-title">{item.name}</span>
-              </button>
-            )
-          })}
+          <button
+            className={`foot-tab-btn ${selectedFootType === 'healthy' ? 'active' : ''}`}
+            onClick={() => {
+              setSelectedFootType('healthy')
+              setAutoAnimate(false)
+              setRotation(0)
+              setTilt(0)
+              setHeight(10)
+            }}
+          >
+            <span className="foot-tab-dot healthy" />
+            <span className="foot-tab-title">Healthy Foot</span>
+          </button>
+
+          <button
+            className={`foot-tab-btn ${selectedFootType === 'flat_foot' ? 'active' : ''}`}
+            onClick={() => {
+              setSelectedFootType('flat_foot')
+              setAutoAnimate(false)
+              setRotation(-4)
+              setTilt(2)
+              setHeight(12)
+            }}
+          >
+            <span className="foot-tab-dot flat" />
+            <span className="foot-tab-title">Flat Foot</span>
+          </button>
         </div>
 
-        {/* Header Utilities */}
+        {/* Clean Header Utilities */}
         <div className="header-actions">
           <button
             className={`header-tool-btn ${showFoot ? 'active' : ''}`}
             onClick={() => setShowFoot(!showFoot)}
-            title="Toggle Foot Model"
+            title="Toggle Foot Visibility"
           >
-            {showFoot ? <Eye size={15} /> : <EyeOff size={15} />}
+            {showFoot ? <Eye size={14} /> : <EyeOff size={14} />}
             <span>Foot: {showFoot ? 'ON' : 'OFF'}</span>
           </button>
 
           <button
             className={`header-tool-btn ${showLabels ? 'active' : ''}`}
             onClick={() => setShowLabels(!showLabels)}
-            title="Toggle 3D Labels (Default OFF)"
+            title="Toggle 3D Mechanical Labels (Default OFF)"
           >
-            <Layers size={15} />
+            <Layers size={14} />
             <span>Labels: {showLabels ? 'ON' : 'OFF'}</span>
           </button>
 
-          <button className="header-tool-btn reset" onClick={resetAll} title="Reset All">
-            <RotateCcw size={15} />
+          <button className="header-tool-btn reset-btn" onClick={resetAll} title="Reset to Neutral Position">
+            <RotateCcw size={14} />
             <span>Reset</span>
           </button>
         </div>
       </header>
 
       {/* =========================================================
-          MAIN 3D WORKSPACE
+          MAIN 3D VIEWPORT
           ========================================================= */}
       <main className="workspace-main">
         {/* 3D WebGL Canvas */}
@@ -202,7 +180,7 @@ export default function App() {
             shadows
             dpr={[1, 2]}
           >
-            <color attach="background" args={['#0b0f19']} />
+            <color attach="background" args={['#090d16']} />
             <ambientLight intensity={0.55} />
             <directionalLight position={[6, 9, 6]} intensity={1.4} castShadow />
             <directionalLight position={[-5, 7, -5]} intensity={0.4} />
@@ -219,7 +197,7 @@ export default function App() {
               />
               <ContactShadows
                 position={[0, -0.44, 0]}
-                opacity={0.4}
+                opacity={0.42}
                 scale={9}
                 blur={2.4}
                 far={4}
@@ -235,7 +213,7 @@ export default function App() {
               minPolarAngle={Math.PI / 10}
               maxPolarAngle={Math.PI / 2.05}
             />
-            <gridHelper args={[12, 24, '#1e293b', '#111827']} />
+            <gridHelper args={[12, 24, '#1b2436', '#0f172a']} />
           </Canvas>
 
           {/* Camera View Switcher Overlay */}
@@ -253,7 +231,7 @@ export default function App() {
               className={`view-btn ${camView === 'side' ? 'active' : ''}`}
               onClick={() => handleCameraChange('side')}
             >
-              Sagittal Side (Arch)
+              Sagittal Arch
             </button>
             <button
               className={`view-btn ${camView === 'front' ? 'active' : ''}`}
@@ -269,7 +247,7 @@ export default function App() {
             </button>
           </div>
 
-          {/* Gait Motion Presets Strip */}
+          {/* Gait Motion Presets Overlay */}
           <div className="motion-presets-strip">
             <span className="preset-label">Gait Phase:</span>
             {GAIT_PRESETS.map((p) => (
@@ -290,7 +268,7 @@ export default function App() {
         </div>
 
         {/* =========================================================
-            BOTTOM LEFT: KINEMATIC MECHANISM CONTROLS HUD
+            BOTTOM LEFT: KINEMATIC ACTUATION HUD
             ========================================================= */}
         <aside className="hud-panel hud-kinematics">
           <div className="hud-header">

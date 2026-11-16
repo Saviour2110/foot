@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei'
+import * as THREE from 'three'
 import {
   RotateCw, ArrowUpDown, MoveVertical, Settings2,
   Play, Pause, RotateCcw,
   Eye, EyeOff, Compass,
-  Layers
+  Layers, CheckCircle2, AlertTriangle
 } from 'lucide-react'
 import MechanismScene from './components/MechanismScene'
 import './index.css'
@@ -80,7 +81,7 @@ export default function App() {
       controlsRef.current.object.position.set(3.8, 3.0, 3.8)
       controlsRef.current.target.set(0, 0.2, 0)
     } else if (view === 'side') {
-      controlsRef.current.object.position.set(0.1, 1.4, 4.2)
+      controlsRef.current.object.position.set(0.1, 1.35, 4.2)
       controlsRef.current.target.set(0, 0.3, 0)
     } else if (view === 'front') {
       controlsRef.current.object.position.set(4.4, 1.2, 0)
@@ -142,7 +143,7 @@ export default function App() {
           </button>
         </div>
 
-        {/* Simple Utilities */}
+        {/* Simple Header Utilities */}
         <div className="header-actions">
           <button
             className={`header-tool-btn ${showFoot ? 'active' : ''}`}
@@ -170,21 +171,54 @@ export default function App() {
       </header>
 
       {/* =========================================================
-          MAIN 3D VIEWPORT
+          MAIN 3D VIEWPORT (MAXED OUT GRAPHICS)
           ========================================================= */}
       <main className="workspace-main">
         {/* 3D WebGL Canvas */}
         <div className="canvas-container">
           <Canvas
-            camera={{ position: [3.8, 3.0, 3.8], fov: 42 }}
+            camera={{ position: [3.8, 3.0, 3.8], fov: 40 }}
             shadows
             dpr={[1, 2]}
+            gl={{
+              antialias: true,
+              toneMapping: THREE.ACESFilmicToneMapping,
+              toneMappingExposure: 1.15
+            }}
           >
-            <color attach="background" args={['#090d16']} />
-            <ambientLight intensity={0.55} />
-            <directionalLight position={[6, 9, 6]} intensity={1.4} castShadow />
-            <directionalLight position={[-5, 7, -5]} intensity={0.4} />
-            <pointLight position={[0, 2.5, 0]} intensity={0.7} color="#14b8a6" />
+            <color attach="background" args={['#080c14']} />
+            <ambientLight intensity={0.45} />
+
+            {/* High-definition key light with soft shadow mapping */}
+            <directionalLight
+              position={[6, 10, 6]}
+              intensity={1.7}
+              castShadow
+              shadow-mapSize-width={2048}
+              shadow-mapSize-height={2048}
+              shadow-bias={-0.0001}
+            />
+
+            {/* Soft cyan fill light */}
+            <directionalLight
+              position={[-5, 6, -5]}
+              intensity={0.65}
+              color="#93c5fd"
+            />
+
+            {/* Crisp rim light for anatomical contour highlights */}
+            <directionalLight
+              position={[0, 8, -8]}
+              intensity={0.9}
+              color="#e0e7ff"
+            />
+
+            {/* Warm arch bounce light to illuminate arch gap */}
+            <pointLight
+              position={[0, 0.45, 0.65]}
+              intensity={0.6}
+              color="#fed7aa"
+            />
 
             <Suspense fallback={null}>
               <MechanismScene
@@ -197,9 +231,9 @@ export default function App() {
               />
               <ContactShadows
                 position={[0, -0.44, 0]}
-                opacity={0.42}
-                scale={9}
-                blur={2.4}
+                opacity={0.5}
+                scale={10}
+                blur={2.2}
                 far={4}
               />
               <Environment preset="city" />
@@ -245,6 +279,21 @@ export default function App() {
             >
               Top View
             </button>
+          </div>
+
+          {/* Foot Morphology Callout Badge */}
+          <div className="morphology-callout-pill">
+            {selectedFootType === 'healthy' ? (
+              <>
+                <CheckCircle2 size={14} className="text-teal" />
+                <span><strong>Healthy Foot:</strong> High Medial Arch (Open gap under arch) &bull; Upright Ankle</span>
+              </>
+            ) : (
+              <>
+                <AlertTriangle size={14} className="text-amber" />
+                <span><strong>Flat Foot:</strong> Fallen Arch (Touching pad flat) &bull; Inward Ankle Tilt (-7.5°)</span>
+              </>
+            )}
           </div>
 
           {/* Simple Foot Position Presets */}

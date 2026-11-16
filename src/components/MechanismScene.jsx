@@ -5,7 +5,7 @@ import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import * as THREE from 'three'
 
 // Helper for photorealistic PBR metals
-function useMetal(color, metalness = 0.85, roughness = 0.25) {
+function useMetal(color, metalness = 0.88, roughness = 0.22) {
   return useMemo(() => new THREE.MeshStandardMaterial({
     color,
     metalness,
@@ -18,10 +18,10 @@ function Label({ position, text, color = '#14b8a6', subtext = '' }) {
   return (
     <Html position={position} center distanceFactor={6.8}>
       <div style={{
-        background: 'rgba(9, 13, 22, 0.92)',
+        background: 'rgba(9, 13, 22, 0.94)',
         backdropFilter: 'blur(10px)',
-        border: `1px solid ${color}70`,
-        boxShadow: `0 4px 16px ${color}25`,
+        border: `1px solid ${color}80`,
+        boxShadow: `0 4px 16px ${color}30`,
         borderRadius: 6,
         padding: '3px 8px',
         fontSize: 9.5,
@@ -43,22 +43,107 @@ function Label({ position, text, color = '#14b8a6', subtext = '' }) {
   )
 }
 
-// Photorealistic Anatomical Human Foot (Loaded from 3D Scan Mesh)
+// Photorealistic Anatomical Human Foot with Multi-layer Skin & Toenails
 function AnatomicalFootMesh({ footType = 'healthy' }) {
   const isFlat = footType === 'flat_foot'
   const modelUrl = isFlat ? '/models/human_foot_flat.stl' : '/models/human_foot.stl'
 
   // Load real scanned human foot geometry
-  const geometry = useLoader(STLLoader, modelUrl)
+  const rawGeometry = useLoader(STLLoader, modelUrl)
 
-  // Realistic human skin material with subtle subsurface warmth and sheen
+  // Compute anatomical vertex colors (skin gradient, rosy heel & ball, translucent toenails)
+  const geometry = useMemo(() => {
+    const geom = rawGeometry.clone()
+    geom.computeVertexNormals()
+
+    const pos = geom.attributes.position
+    const count = pos.count
+    const colors = new Float32Array(count * 3)
+
+    // Base skin tones
+    const baseR = 0.89, baseG = 0.70, baseB = 0.61
+
+    for (let i = 0; i < count; i++) {
+      const x = pos.getX(i)
+      const y = pos.getY(i)
+      const z = pos.getZ(i)
+
+      let r = baseR
+      let g = baseG
+      let b = baseB
+
+      // 1. Toenails: 5 distinct keratin plates on top of distal phalanges
+      if (x > 0.69 && y > 0.235 && y < 0.33) {
+        // Big toe nail
+        if (z > 0.12 && z < 0.25) {
+          r = 0.98; g = 0.92; b = 0.88 // translucent ivory-pink nail
+        }
+        // 2nd toe nail
+        else if (z > 0.03 && z < 0.12 && x > 0.73) {
+          r = 0.97; g = 0.91; b = 0.87
+        }
+        // 3rd toe nail
+        else if (z > -0.06 && z <= 0.03 && x > 0.72) {
+          r = 0.97; g = 0.91; b = 0.87
+        }
+        // 4th toe nail
+        else if (z > -0.15 && z <= -0.06 && x > 0.70) {
+          r = 0.97; g = 0.90; b = 0.86
+        }
+        // Little toe nail
+        else if (z > -0.25 && z <= -0.15 && x > 0.68) {
+          r = 0.96; g = 0.89; b = 0.85
+        }
+      }
+      // 2. Rosy Plantar Heel Pad (vascularized calcaneus cushion)
+      else if (x < -0.22 && y < 0.28) {
+        const factor = Math.min(1, Math.max(0, (0.28 - y) / 0.07))
+        r = THREE.MathUtils.lerp(r, 0.94, factor * 0.7)
+        g = THREE.MathUtils.lerp(g, 0.58, factor * 0.7)
+        b = THREE.MathUtils.lerp(b, 0.54, factor * 0.7)
+      }
+      // 3. Rosy Metatarsal Ball Pad (cushioned forefoot ball)
+      else if (x > 0.40 && x < 0.72 && y < 0.28) {
+        const factor = Math.min(1, Math.max(0, (0.28 - y) / 0.07))
+        r = THREE.MathUtils.lerp(r, 0.93, factor * 0.6)
+        g = THREE.MathUtils.lerp(g, 0.62, factor * 0.6)
+        b = THREE.MathUtils.lerp(b, 0.56, factor * 0.6)
+      }
+      // 4. Medial Longitudinal Arch (delicate paler skin tone)
+      else if (x > -0.25 && x < 0.35 && z > 0.04 && y < 0.38) {
+        const factor = Math.min(1, Math.max(0, z / 0.22))
+        r = THREE.MathUtils.lerp(r, 0.94, factor * 0.4)
+        g = THREE.MathUtils.lerp(g, 0.78, factor * 0.4)
+        b = THREE.MathUtils.lerp(b, 0.72, factor * 0.4)
+      }
+      // 5. Achilles Tendon Ridge (rear heel vertical tendon highlight)
+      else if (x < -0.38 && y > 0.32 && Math.abs(z) < 0.05) {
+        r = THREE.MathUtils.lerp(r, 0.93, 0.3)
+        g = THREE.MathUtils.lerp(g, 0.76, 0.3)
+        b = THREE.MathUtils.lerp(b, 0.68, 0.3)
+      }
+
+      colors[i * 3] = r
+      colors[i * 3 + 1] = g
+      colors[i * 3 + 2] = b
+    }
+
+    geom.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+    return geom
+  }, [rawGeometry])
+
+  // Realistic human skin physical material with biological dermal sheen
   const skinMaterial = useMemo(() => {
-    return new THREE.MeshStandardMaterial({
-      color: isFlat ? '#e4b69d' : '#dfb095',
-      roughness: 0.52,
-      metalness: 0.04,
+    return new THREE.MeshPhysicalMaterial({
+      vertexColors: true,
+      roughness: 0.44,
+      metalness: 0.0,
+      clearcoat: 0.22,
+      clearcoatRoughness: 0.35,
+      sheen: 0.38,
+      sheenColor: new THREE.Color('#fca5a5'), // soft subcutaneous biological rim glow
     })
-  }, [isFlat])
+  }, [])
 
   return (
     <group position={[0, 0, 0]}>
@@ -70,16 +155,16 @@ function AnatomicalFootMesh({ footType = 'healthy' }) {
         receiveShadow
       />
 
-      {/* Ergonomic Padded Compression Straps with Aluminum Buckles */}
+      {/* Ergonomic Padded Restraint Straps with Aluminum Buckles */}
       {/* Forefoot strap */}
       <group position={[0.22, 0.28, 0]}>
         <mesh castShadow>
           <boxGeometry args={[0.09, 0.14, 0.38]} />
-          <meshStandardMaterial color="#0f766e" roughness={0.6} />
+          <meshStandardMaterial color="#0f766e" roughness={0.65} metalness={0.1} />
         </mesh>
-        <mesh position={[0, 0.08, 0.16]}>
+        <mesh position={[0, 0.08, 0.16]} castShadow>
           <boxGeometry args={[0.07, 0.03, 0.04]} />
-          <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.2} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.94} roughness={0.18} />
         </mesh>
       </group>
 
@@ -87,11 +172,11 @@ function AnatomicalFootMesh({ footType = 'healthy' }) {
       <group position={[-0.20, 0.38, 0]} rotation={[0, 0, 0.38]}>
         <mesh castShadow>
           <boxGeometry args={[0.09, 0.18, 0.36]} />
-          <meshStandardMaterial color="#0f766e" roughness={0.6} />
+          <meshStandardMaterial color="#0f766e" roughness={0.65} metalness={0.1} />
         </mesh>
-        <mesh position={[0, 0.1, 0.15]}>
+        <mesh position={[0, 0.1, 0.15]} castShadow>
           <boxGeometry args={[0.07, 0.03, 0.04]} />
-          <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.2} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.94} roughness={0.18} />
         </mesh>
       </group>
     </group>
@@ -115,27 +200,27 @@ export default function MechanismScene({
   const verticalOffset = heightNorm * 0.55
 
   // Precision Industrial & Aerospace Materials
-  const baseMat = useMetal('#0f172a', 0.88, 0.28)          // Anodized heavy tooling base
-  const chromeMat = useMetal('#f1f5f9', 0.98, 0.12)        // Hard-chrome mirror ground rods
-  const leadScrewMat = useMetal('#cbd5e1', 0.92, 0.22)     // Ground ball screw
-  const carriageMat = useMetal('#1e293b', 0.82, 0.26)      // CNC machined aluminum carriage
-  const motorMat = useMetal('#0b0f19', 0.65, 0.35)         // Stepper motor body
-  const motorFaceMat = useMetal('#64748b', 0.9, 0.2)       // Machined motor face
-  const couplerMat = useMetal('#38bdf8', 0.85, 0.2)        // Flexible beam coupler
-  const bronzeMat = useMetal('#d97706', 0.92, 0.18)        // Precision bronze worm wheel
-  const steelMat = useMetal('#94a3b8', 0.94, 0.16)         // Ground pivot pins & bolts
+  const baseMat = useMetal('#0b1120', 0.88, 0.26)          // Heavy anodized black tooling base
+  const chromeMat = useMetal('#f8fafc', 0.98, 0.08)        // Mirror hard-chrome ground rods
+  const leadScrewMat = useMetal('#e2e8f0', 0.92, 0.18)     // Ground ball screw
+  const carriageMat = useMetal('#1e293b', 0.84, 0.24)      // CNC machined aluminum carriage
+  const motorMat = useMetal('#090d16', 0.70, 0.32)         // Stepper motor body
+  const motorFaceMat = useMetal('#64748b', 0.92, 0.18)     // Machined motor face
+  const couplerMat = useMetal('#0ea5e9', 0.88, 0.18)       // Blue anodized flexible beam coupler
+  const bronzeMat = useMetal('#d97706', 0.92, 0.16)        // Precision bronze worm wheel
+  const steelMat = useMetal('#94a3b8', 0.95, 0.14)         // Ground pivot pins & bolts
   const rubberMat = useMemo(() => new THREE.MeshStandardMaterial({
-    color: '#090d16',
+    color: '#05080f',
     roughness: 0.92,
     metalness: 0.05
   }), [])
   const footbedPadMat = useMemo(() => new THREE.MeshStandardMaterial({
     color: '#0d9488',
-    roughness: 0.75,
-    metalness: 0.08
+    roughness: 0.72,
+    metalness: 0.06
   }), [])
-  const trimTeal = useMetal('#14b8a6', 0.75, 0.25)
-  const trimAmber = useMetal('#f59e0b', 0.75, 0.25)
+  const trimTeal = useMetal('#14b8a6', 0.75, 0.22)
+  const trimAmber = useMetal('#f59e0b', 0.75, 0.22)
   const limitStopMat = useMetal('#ef4444', 0.85, 0.2)
 
   return (

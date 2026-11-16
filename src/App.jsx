@@ -191,40 +191,40 @@ export default function App() {
             gl={{
               antialias: true,
               toneMapping: THREE.ACESFilmicToneMapping,
-              toneMappingExposure: 1.25
+              toneMappingExposure: 1.02
             }}
           >
             <color attach="background" args={['#070a12']} />
-            <ambientLight intensity={0.5} />
+            <ambientLight intensity={0.4} />
 
-            {/* High-definition studio key light with realistic soft penumbra */}
+            {/* High-definition balanced studio key light */}
             <directionalLight
-              position={[6, 11, 7]}
-              intensity={2.2}
+              position={[5, 10, 6]}
+              intensity={1.3}
               castShadow
               shadow-mapSize-width={2048}
               shadow-mapSize-height={2048}
               shadow-bias={-0.0001}
             />
 
-            {/* Soft cool fill light for realistic ambient occlusion */}
+            {/* Soft cool ambient fill light */}
             <directionalLight
-              position={[-6, 7, -5]}
-              intensity={0.8}
+              position={[-5, 7, -5]}
+              intensity={0.45}
               color="#b0d4f1"
             />
 
-            {/* Crisp rim light for anatomical contours & Achilles tendon */}
+            {/* Subtle contour rim light */}
             <directionalLight
-              position={[0, 9, -9]}
-              intensity={1.4}
+              position={[0, 8, -8]}
+              intensity={0.65}
               color="#f0f4ff"
             />
 
-            {/* Warm arch bounce light reflecting off the silicone pad */}
+            {/* Delicate warm bounce light for arch cavity */}
             <pointLight
               position={[0.1, 0.35, 0.55]}
-              intensity={0.85}
+              intensity={0.35}
               color="#fed7aa"
             />
 

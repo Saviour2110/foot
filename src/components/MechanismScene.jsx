@@ -3,7 +3,6 @@ import { useLoader } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import * as THREE from 'three'
-import { createFootTextures } from '../utils/footTextures'
 
 // Preload both real scanned models for instant switching
 useLoader.preload(STLLoader, '/models/human_foot.stl')
@@ -48,138 +47,127 @@ function Label({ position, text, color = '#14b8a6', subtext = '' }) {
   )
 }
 
-// Photorealistic Anatomical Human Foot with Multi-layer PBR Skin, Veins & Keratin Toenails
+// Clean, Organic, Natural Human Foot & Leg (Smooth Biological Shading)
 function AnatomicalFootMesh({ footType = 'healthy' }) {
   const isFlat = footType === 'flat_foot'
   const modelUrl = isFlat ? '/models/human_foot_flat.stl' : '/models/human_foot.stl'
 
-  // Load real scanned human foot geometry
+  // Load clean organic human foot geometry
   const rawGeometry = useLoader(STLLoader, modelUrl)
 
-  // 2048x2048 PBR procedural skin textures (Diffuse, Normal, Roughness)
-  const textures = useMemo(() => {
-    return createFootTextures(isFlat)
-  }, [isFlat])
-
-  // Compute seamless anatomical UV coordinates and tangents
+  // Compute smooth, organic anatomical vertex colors (natural warm skin, rosy pads, keratin nails)
   const geometry = useMemo(() => {
     const geom = rawGeometry.clone()
-    geom.computeVertexNormals()
+    geom.computeVertexNormals() // Buttery smooth normals, no faceted triangles
 
     const pos = geom.attributes.position
     const count = pos.count
-    const uvs = new Float32Array(count * 2)
-    const indices = new Uint32Array(count)
+    const colors = new Float32Array(count * 3)
 
-    const minX = -0.48
-    const maxX = 0.87
+    // Base warm natural human skin tone (warm Caucasian / healthy melanin undertone)
+    const baseR = 0.85, baseG = 0.66, baseB = 0.55
 
-    for (let i = 0; i < count; i += 3) {
-      const uList = []
-      const vList = []
+    for (let i = 0; i < count; i++) {
+      const x = pos.getX(i)
+      const y = pos.getY(i)
+      const z = pos.getZ(i)
 
-      for (let j = 0; j < 3; j++) {
-        const idx = i + j
-        indices[idx] = idx
-        const x = pos.getX(idx)
-        const y = pos.getY(idx)
-        const z = pos.getZ(idx)
+      let r = baseR
+      let g = baseG
+      let b = baseB
 
-        // U: length of foot [0, 1]
-        const u = Math.min(1, Math.max(0, (x - minX) / (maxX - minX)))
-
-        // V: angle around cross-section
-        const cy = x < 0.2 ? 0.35 + (x - minX) * 0.1 : 0.28
-        const angle = Math.atan2(z, y - cy)
-        const v = (angle + Math.PI) / (2 * Math.PI)
-
-        uList.push(u)
-        vList.push(v)
-      }
-
-      // Seam crossing correction
-      const minV = Math.min(...vList)
-      const maxV = Math.max(...vList)
-      if (maxV - minV > 0.5) {
-        for (let j = 0; j < 3; j++) {
-          if (vList[j] < 0.5) vList[j] += 1.0
+      // 1. Toenails: Translucent keratin plates with healthy vascular pink nail bed & ivory edge
+      if (x > 0.69 && y > 0.235 && y < 0.34) {
+        // Big toe nail
+        if (z > 0.11 && z < 0.26) {
+          r = 0.96; g = 0.82; b = 0.78
+        }
+        // 2nd toe nail
+        else if (z > 0.02 && z <= 0.11 && x > 0.72) {
+          r = 0.95; g = 0.81; b = 0.77
+        }
+        // 3rd toe nail
+        else if (z > -0.06 && z <= 0.02 && x > 0.71) {
+          r = 0.95; g = 0.81; b = 0.77
+        }
+        // 4th toe nail
+        else if (z > -0.15 && z <= -0.06 && x > 0.69) {
+          r = 0.94; g = 0.80; b = 0.76
+        }
+        // Little toe nail
+        else if (z > -0.25 && z <= -0.15 && x > 0.67) {
+          r = 0.93; g = 0.79; b = 0.75
         }
       }
-
-      for (let j = 0; j < 3; j++) {
-        const idx = i + j
-        uvs[idx * 2] = uList[j]
-        uvs[idx * 2 + 1] = vList[j]
+      // 2. Rosy Plantar Heel Cushion Pad (warm vascularized calcaneus fat pad)
+      else if (x < -0.20 && y < 0.29) {
+        const factor = Math.min(1, Math.max(0, (0.29 - y) / 0.08))
+        r = THREE.MathUtils.lerp(r, 0.90, factor * 0.6)
+        g = THREE.MathUtils.lerp(g, 0.54, factor * 0.6)
+        b = THREE.MathUtils.lerp(b, 0.49, factor * 0.6)
       }
+      // 3. Rosy Metatarsal Ball Cushion Pad (forefoot weight-bearing cushion)
+      else if (x > 0.38 && x < 0.72 && y < 0.29) {
+        const factor = Math.min(1, Math.max(0, (0.29 - y) / 0.08))
+        r = THREE.MathUtils.lerp(r, 0.89, factor * 0.55)
+        g = THREE.MathUtils.lerp(g, 0.56, factor * 0.55)
+        b = THREE.MathUtils.lerp(b, 0.50, factor * 0.55)
+      }
+      // 4. Medial Longitudinal Arch / Navicular Border
+      else if (x > -0.22 && x < 0.36 && z > 0.03 && y < 0.40) {
+        if (isFlat) {
+          // Collapsed flat arch: subtle warm weight-bearing erythema
+          const factor = Math.min(1, Math.max(0, z / 0.20))
+          r = THREE.MathUtils.lerp(r, 0.88, factor * 0.45)
+          g = THREE.MathUtils.lerp(g, 0.58, factor * 0.45)
+          b = THREE.MathUtils.lerp(b, 0.51, factor * 0.45)
+        } else {
+          // High athletic arch: delicate paler skin tone
+          const factor = Math.min(1, Math.max(0, z / 0.20))
+          r = THREE.MathUtils.lerp(r, 0.89, factor * 0.35)
+          g = THREE.MathUtils.lerp(g, 0.73, factor * 0.35)
+          b = THREE.MathUtils.lerp(b, 0.64, factor * 0.35)
+        }
+      }
+      // 5. Achilles Tendon Ridge (rear calcaneal vertical tendon highlight)
+      else if (x < -0.36 && y > 0.32 && Math.abs(z) < 0.06) {
+        r = THREE.MathUtils.lerp(r, 0.88, 0.25)
+        g = THREE.MathUtils.lerp(g, 0.72, 0.25)
+        b = THREE.MathUtils.lerp(b, 0.63, 0.25)
+      }
+
+      colors[i * 3] = r
+      colors[i * 3 + 1] = g
+      colors[i * 3 + 2] = b
     }
 
-    geom.setAttribute('uv', new THREE.BufferAttribute(uvs, 2))
-    geom.setIndex(new THREE.BufferAttribute(indices, 1))
-
-    try {
-      geom.computeTangents()
-    } catch {
-      // Fallback handled gracefully
-    }
-
+    geom.setAttribute('color', new THREE.BufferAttribute(colors, 3))
     return geom
-  }, [rawGeometry])
+  }, [rawGeometry, isFlat])
 
-  // Multi-layer PBR living skin with epidermal clearcoat, micro-sheen & subcutaneous glow
+  // Natural living human skin material (soft organic diffuseness, subtle hydration sheen)
   const skinMaterial = useMemo(() => {
     return new THREE.MeshPhysicalMaterial({
-      map: textures.diffuseMap,
-      normalMap: textures.normalMap,
-      normalScale: new THREE.Vector2(0.85, 0.85),
-      roughnessMap: textures.roughnessMap,
-      roughness: 0.38,
+      vertexColors: true,
+      roughness: 0.52,          // Natural matte biological skin (no glossy plastic/wax)
       metalness: 0.0,
-      clearcoat: 0.32,
-      clearcoatRoughness: 0.25,
-      sheen: 0.90,
-      sheenColor: new THREE.Color(isFlat ? '#f87171' : '#ff9482'), // subcutaneous biological rim glow
-      sheenRoughness: 0.38,
-      transmission: 0.04,
-      thickness: 0.85,
-      attenuationColor: new THREE.Color('#dc2626'),
-      attenuationDistance: 0.35,
+      clearcoat: 0.06,          // Subtle natural skin hydration
+      clearcoatRoughness: 0.35,
+      sheen: 0.32,              // Delicate subcutaneous peach-fuzz rim glow
+      sheenColor: new THREE.Color(isFlat ? '#fca5a5' : '#fed7aa'),
+      sheenRoughness: 0.40,
     })
-  }, [textures, isFlat])
+  }, [isFlat])
 
   return (
     <group position={[0, 0, 0]}>
-      {/* Real anatomical foot mesh */}
+      {/* Real anatomical foot mesh with buttery smooth organic normals */}
       <mesh
         geometry={geometry}
         material={skinMaterial}
         castShadow
         receiveShadow
       />
-
-      {/* Ergonomic Padded Restraint Straps with Aluminum Buckles */}
-      {/* Forefoot strap */}
-      <group position={[0.22, 0.28, isFlat ? 0.02 : 0]}>
-        <mesh castShadow>
-          <boxGeometry args={[0.09, 0.14, 0.40]} />
-          <meshStandardMaterial color="#0f766e" roughness={0.65} metalness={0.1} />
-        </mesh>
-        <mesh position={[0, 0.08, 0.17]} castShadow>
-          <boxGeometry args={[0.07, 0.03, 0.04]} />
-          <meshStandardMaterial color="#cbd5e1" metalness={0.94} roughness={0.18} />
-        </mesh>
-      </group>
-
-      {/* Instep / Ankle strap */}
-      <group position={[-0.20, isFlat ? 0.36 : 0.38, isFlat ? -0.03 : 0]} rotation={[isFlat ? -0.12 : 0, 0, 0.38]}>
-        <mesh castShadow>
-          <boxGeometry args={[0.09, 0.18, 0.38]} />
-          <meshStandardMaterial color="#0f766e" roughness={0.65} metalness={0.1} />
-        </mesh>
-        <mesh position={[0, 0.1, 0.16]} castShadow>
-          <boxGeometry args={[0.07, 0.03, 0.04]} />
-          <meshStandardMaterial color="#cbd5e1" metalness={0.94} roughness={0.18} />
-        </mesh>
-      </group>
     </group>
   )
 }
@@ -505,51 +493,44 @@ export default function MechanismScene({
                 <boxGeometry args={[1.65, 0.012, 0.85]} />
               </mesh>
 
-              {/* Dynamic Biomechanical Plantar Contact Pattern */}
-              {footType === 'healthy' ? (
-                <group position={[0, 0.2115, 0]}>
-                  {/* Calcaneus Heel Contact Pad (Isolated) */}
-                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.28, 0, 0.01]}>
-                    <ringGeometry args={[0.04, 0.14, 32]} />
-                    <meshBasicMaterial color="#2dd4bf" transparent opacity={0.35} />
-                  </mesh>
-                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.28, 0, 0.01]}>
-                    <circleGeometry args={[0.10, 32]} />
-                    <meshBasicMaterial color="#14b8a6" transparent opacity={0.45} />
-                  </mesh>
-                  {/* Metatarsal Heads & Ball Contact (Isolated) */}
-                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.46, 0, 0.04]}>
-                    <circleGeometry args={[0.18, 32]} />
-                    <meshBasicMaterial color="#14b8a6" transparent opacity={0.4} />
-                  </mesh>
-                  {/* Narrow Lateral Border Contact */}
-                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.08, 0, -0.10]}>
-                    <planeGeometry args={[0.42, 0.06]} />
-                    <meshBasicMaterial color="#0d9488" transparent opacity={0.32} />
-                  </mesh>
-                </group>
-              ) : (
-                <group position={[0, 0.2115, 0]}>
-                  {/* Continuous Full-Contact Fallen Arch Pattern (Amber/Warning) */}
-                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.06, 0, 0.04]}>
-                    <planeGeometry args={[0.92, 0.36]} />
-                    <meshBasicMaterial color="#f59e0b" transparent opacity={0.30} />
-                  </mesh>
-                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.26, 0, 0.02]}>
-                    <circleGeometry args={[0.16, 32]} />
-                    <meshBasicMaterial color="#d97706" transparent opacity={0.45} />
-                  </mesh>
-                  {/* Dropped Medial Arch Contact Patch */}
-                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.08, 0, 0.12]}>
-                    <circleGeometry args={[0.14, 32]} />
-                    <meshBasicMaterial color="#f59e0b" transparent opacity={0.5} />
-                  </mesh>
-                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.46, 0, 0.06]}>
-                    <circleGeometry args={[0.20, 32]} />
-                    <meshBasicMaterial color="#d97706" transparent opacity={0.45} />
-                  </mesh>
-                </group>
-              )}
+              {/* Clean Biomechanical Plantar Pressure Contact Silhouette (No Z-fighting) */}
+              <group position={[0, 0.213, 0]}>
+                {footType === 'healthy' ? (
+                  <>
+                    {/* Calcaneus Heel Contact Pad (Isolated) */}
+                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.28, 0, 0.02]}>
+                      <circleGeometry args={[0.12, 48]} />
+                      <meshBasicMaterial color="#14b8a6" transparent opacity={0.35} depthWrite={false} />
+                    </mesh>
+                    {/* Metatarsal Ball & Toes Contact Pad (Isolated) */}
+                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.45, 0, 0.04]}>
+                      <circleGeometry args={[0.18, 48]} />
+                      <meshBasicMaterial color="#14b8a6" transparent opacity={0.35} depthWrite={false} />
+                    </mesh>
+                    {/* Narrow Lateral Edge Band */}
+                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.08, 0, -0.10]}>
+                      <planeGeometry args={[0.42, 0.07]} />
+                      <meshBasicMaterial color="#0d9488" transparent opacity={0.25} depthWrite={false} />
+                    </mesh>
+                  </>
+                ) : (
+                  <>
+                    {/* Full Continuous Fallen Arch Contact Map (Amber/Warning) */}
+                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.08, 0, 0.03]}>
+                      <planeGeometry args={[0.88, 0.32]} />
+                      <meshBasicMaterial color="#f59e0b" transparent opacity={0.30} depthWrite={false} />
+                    </mesh>
+                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.26, 0, 0.02]}>
+                      <circleGeometry args={[0.14, 48]} />
+                      <meshBasicMaterial color="#d97706" transparent opacity={0.40} depthWrite={false} />
+                    </mesh>
+                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.45, 0, 0.05]}>
+                      <circleGeometry args={[0.18, 48]} />
+                      <meshBasicMaterial color="#d97706" transparent opacity={0.40} depthWrite={false} />
+                    </mesh>
+                  </>
+                )}
+              </group>
 
               {/* Platform Bevel Perimeter Trim */}
               <mesh material={trimTeal} position={[0, 0.198, 0]}>

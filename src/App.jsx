@@ -191,40 +191,40 @@ export default function App() {
             gl={{
               antialias: true,
               toneMapping: THREE.ACESFilmicToneMapping,
-              toneMappingExposure: 1.15
+              toneMappingExposure: 1.25
             }}
           >
-            <color attach="background" args={['#080c14']} />
-            <ambientLight intensity={0.45} />
+            <color attach="background" args={['#070a12']} />
+            <ambientLight intensity={0.5} />
 
-            {/* High-definition studio key light */}
+            {/* High-definition studio key light with realistic soft penumbra */}
             <directionalLight
-              position={[6, 10, 6]}
-              intensity={1.7}
+              position={[6, 11, 7]}
+              intensity={2.2}
               castShadow
               shadow-mapSize-width={2048}
               shadow-mapSize-height={2048}
               shadow-bias={-0.0001}
             />
 
-            {/* Soft cool fill light */}
+            {/* Soft cool fill light for realistic ambient occlusion */}
             <directionalLight
-              position={[-5, 6, -5]}
-              intensity={0.65}
-              color="#93c5fd"
+              position={[-6, 7, -5]}
+              intensity={0.8}
+              color="#b0d4f1"
             />
 
-            {/* Crisp rim light for anatomical contours */}
+            {/* Crisp rim light for anatomical contours & Achilles tendon */}
             <directionalLight
-              position={[0, 8, -8]}
-              intensity={0.9}
-              color="#e0e7ff"
+              position={[0, 9, -9]}
+              intensity={1.4}
+              color="#f0f4ff"
             />
 
-            {/* Warm arch bounce light */}
+            {/* Warm arch bounce light reflecting off the silicone pad */}
             <pointLight
-              position={[0, 0.45, 0.65]}
-              intensity={0.6}
+              position={[0.1, 0.35, 0.55]}
+              intensity={0.85}
               color="#fed7aa"
             />
 
@@ -239,12 +239,12 @@ export default function App() {
               />
               <ContactShadows
                 position={[0, -0.44, 0]}
-                opacity={0.5}
-                scale={10}
-                blur={2.2}
-                far={4}
+                opacity={0.65}
+                scale={12}
+                blur={1.8}
+                far={5}
               />
-              <Environment preset="city" />
+              <Environment preset="studio" />
             </Suspense>
 
             <OrbitControls
@@ -265,7 +265,7 @@ export default function App() {
                 <CheckCircle2 size={15} className="status-icon text-teal" />
                 <div className="status-text">
                   <span className="status-title">Healthy Foot</span>
-                  <span className="status-desc">Natural High Medial Arch &bull; Upright Vertical Ankle</span>
+                  <span className="status-desc">Natural High Medial Arch (3.5cm Clearance) &bull; Neutral Ankle (0°)</span>
                 </div>
               </div>
             ) : (
@@ -273,7 +273,7 @@ export default function App() {
                 <AlertTriangle size={15} className="status-icon text-amber" />
                 <div className="status-text">
                   <span className="status-title">Flat Foot</span>
-                  <span className="status-desc">Fallen Medial Arch (Touching Plate) &bull; Inward Ankle Tilt (-7.5°)</span>
+                  <span className="status-desc">Fallen Arch (100% Floor Contact) &bull; Calcaneal Valgus (-9° Pronation) &bull; Navicular Drop</span>
                 </div>
               </div>
             )}

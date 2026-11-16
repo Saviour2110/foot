@@ -3,6 +3,7 @@ import { useLoader } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import * as THREE from 'three'
+import { createFootTextures } from '../utils/footTextures'
 
 // Preload both real scanned models for instant switching
 useLoader.preload(STLLoader, '/models/human_foot.stl')
@@ -47,7 +48,7 @@ function Label({ position, text, color = '#14b8a6', subtext = '' }) {
   )
 }
 
-// Photorealistic Anatomical Human Foot with Multi-layer Skin & Toenails
+// Photorealistic Anatomical Human Foot with Multi-layer PBR Skin, Veins & Keratin Toenails
 function AnatomicalFootMesh({ footType = 'healthy' }) {
   const isFlat = footType === 'flat_foot'
   const modelUrl = isFlat ? '/models/human_foot_flat.stl' : '/models/human_foot.stl'
@@ -55,108 +56,95 @@ function AnatomicalFootMesh({ footType = 'healthy' }) {
   // Load real scanned human foot geometry
   const rawGeometry = useLoader(STLLoader, modelUrl)
 
-  // Compute anatomical vertex colors (skin gradient, rosy heel & ball, translucent toenails)
+  // 2048x2048 PBR procedural skin textures (Diffuse, Normal, Roughness)
+  const textures = useMemo(() => {
+    return createFootTextures(isFlat)
+  }, [isFlat])
+
+  // Compute seamless anatomical UV coordinates and tangents
   const geometry = useMemo(() => {
     const geom = rawGeometry.clone()
     geom.computeVertexNormals()
 
     const pos = geom.attributes.position
     const count = pos.count
-    const colors = new Float32Array(count * 3)
+    const uvs = new Float32Array(count * 2)
+    const indices = new Uint32Array(count)
 
-    // Base skin tones
-    const baseR = 0.89, baseG = 0.70, baseB = 0.61
+    const minX = -0.48
+    const maxX = 0.87
 
-    for (let i = 0; i < count; i++) {
-      const x = pos.getX(i)
-      const y = pos.getY(i)
-      const z = pos.getZ(i)
+    for (let i = 0; i < count; i += 3) {
+      const uList = []
+      const vList = []
 
-      let r = baseR
-      let g = baseG
-      let b = baseB
+      for (let j = 0; j < 3; j++) {
+        const idx = i + j
+        indices[idx] = idx
+        const x = pos.getX(idx)
+        const y = pos.getY(idx)
+        const z = pos.getZ(idx)
 
-      // 1. Toenails: 5 distinct keratin plates on top of distal phalanges
-      if (x > 0.69 && y > 0.235 && y < 0.33) {
-        // Big toe nail
-        if (z > 0.12 && z < 0.25) {
-          r = 0.98; g = 0.92; b = 0.88 // translucent ivory-pink nail
-        }
-        // 2nd toe nail
-        else if (z > 0.03 && z < 0.12 && x > 0.73) {
-          r = 0.97; g = 0.91; b = 0.87
-        }
-        // 3rd toe nail
-        else if (z > -0.06 && z <= 0.03 && x > 0.72) {
-          r = 0.97; g = 0.91; b = 0.87
-        }
-        // 4th toe nail
-        else if (z > -0.15 && z <= -0.06 && x > 0.70) {
-          r = 0.97; g = 0.90; b = 0.86
-        }
-        // Little toe nail
-        else if (z > -0.25 && z <= -0.15 && x > 0.68) {
-          r = 0.96; g = 0.89; b = 0.85
-        }
-      }
-      // 2. Rosy Plantar Heel Pad (vascularized calcaneus cushion)
-      else if (x < -0.22 && y < 0.28) {
-        const factor = Math.min(1, Math.max(0, (0.28 - y) / 0.07))
-        r = THREE.MathUtils.lerp(r, 0.94, factor * 0.7)
-        g = THREE.MathUtils.lerp(g, 0.58, factor * 0.7)
-        b = THREE.MathUtils.lerp(b, 0.54, factor * 0.7)
-      }
-      // 3. Rosy Metatarsal Ball Pad (cushioned forefoot ball)
-      else if (x > 0.40 && x < 0.72 && y < 0.28) {
-        const factor = Math.min(1, Math.max(0, (0.28 - y) / 0.07))
-        r = THREE.MathUtils.lerp(r, 0.93, factor * 0.6)
-        g = THREE.MathUtils.lerp(g, 0.62, factor * 0.6)
-        b = THREE.MathUtils.lerp(b, 0.56, factor * 0.6)
-      }
-      // 4. Medial Longitudinal Arch / Navicular Bulge
-      else if (x > -0.25 && x < 0.35 && z > 0.04 && y < 0.38) {
-        if (isFlat) {
-          // Collapsed flat arch with biological weight-bearing flush
-          const factor = Math.min(1, Math.max(0, z / 0.22))
-          r = THREE.MathUtils.lerp(r, 0.93, factor * 0.5)
-          g = THREE.MathUtils.lerp(g, 0.62, factor * 0.5)
-          b = THREE.MathUtils.lerp(b, 0.56, factor * 0.5)
-        } else {
-          // High athletic arch with clear delicate skin
-          const factor = Math.min(1, Math.max(0, z / 0.22))
-          r = THREE.MathUtils.lerp(r, 0.94, factor * 0.4)
-          g = THREE.MathUtils.lerp(g, 0.78, factor * 0.4)
-          b = THREE.MathUtils.lerp(b, 0.72, factor * 0.4)
-        }
-      }
-      // 5. Achilles Tendon Ridge (rear heel vertical tendon highlight)
-      else if (x < -0.38 && y > 0.32 && Math.abs(z) < 0.05) {
-        r = THREE.MathUtils.lerp(r, 0.93, 0.3)
-        g = THREE.MathUtils.lerp(g, 0.76, 0.3)
-        b = THREE.MathUtils.lerp(b, 0.68, 0.3)
+        // U: length of foot [0, 1]
+        const u = Math.min(1, Math.max(0, (x - minX) / (maxX - minX)))
+
+        // V: angle around cross-section
+        const cy = x < 0.2 ? 0.35 + (x - minX) * 0.1 : 0.28
+        const angle = Math.atan2(z, y - cy)
+        const v = (angle + Math.PI) / (2 * Math.PI)
+
+        uList.push(u)
+        vList.push(v)
       }
 
-      colors[i * 3] = r
-      colors[i * 3 + 1] = g
-      colors[i * 3 + 2] = b
+      // Seam crossing correction
+      const minV = Math.min(...vList)
+      const maxV = Math.max(...vList)
+      if (maxV - minV > 0.5) {
+        for (let j = 0; j < 3; j++) {
+          if (vList[j] < 0.5) vList[j] += 1.0
+        }
+      }
+
+      for (let j = 0; j < 3; j++) {
+        const idx = i + j
+        uvs[idx * 2] = uList[j]
+        uvs[idx * 2 + 1] = vList[j]
+      }
     }
 
-    geom.setAttribute('color', new THREE.BufferAttribute(colors, 3))
-    return geom
-  }, [rawGeometry, isFlat])
+    geom.setAttribute('uv', new THREE.BufferAttribute(uvs, 2))
+    geom.setIndex(new THREE.BufferAttribute(indices, 1))
 
-  // Realistic human skin physical material with biological dermal sheen
+    try {
+      geom.computeTangents()
+    } catch {
+      // Fallback handled gracefully
+    }
+
+    return geom
+  }, [rawGeometry])
+
+  // Multi-layer PBR living skin with epidermal clearcoat, micro-sheen & subcutaneous glow
   const skinMaterial = useMemo(() => {
     return new THREE.MeshPhysicalMaterial({
-      vertexColors: true,
-      roughness: 0.44,
+      map: textures.diffuseMap,
+      normalMap: textures.normalMap,
+      normalScale: new THREE.Vector2(0.85, 0.85),
+      roughnessMap: textures.roughnessMap,
+      roughness: 0.38,
       metalness: 0.0,
-      clearcoat: 0.22,
-      clearcoatRoughness: 0.35,
-      sheen: 0.38,
-      sheenColor: new THREE.Color(isFlat ? '#f87171' : '#fca5a5'), // soft subcutaneous biological rim glow
+      clearcoat: 0.32,
+      clearcoatRoughness: 0.25,
+      sheen: 0.90,
+      sheenColor: new THREE.Color(isFlat ? '#f87171' : '#ff9482'), // subcutaneous biological rim glow
+      sheenRoughness: 0.38,
+      transmission: 0.04,
+      thickness: 0.85,
+      attenuationColor: new THREE.Color('#dc2626'),
+      attenuationDistance: 0.35,
     })
-  }, [isFlat])
+  }, [textures, isFlat])
 
   return (
     <group position={[0, 0, 0]}>
@@ -250,6 +238,36 @@ export default function MechanismScene({
       <mesh material={trimTeal} position={[0, 0.005, 0]}>
         <boxGeometry args={[2.52, 0.012, 1.52]} />
       </mesh>
+
+      {/* Front Precision Telemetry Display Panel on Tooling Chassis */}
+      <group position={[0, -0.06, 0.76]}>
+        <mesh>
+          <boxGeometry args={[1.3, 0.07, 0.012]} />
+          <meshStandardMaterial color="#05070d" metalness={0.92} roughness={0.15} />
+        </mesh>
+        <Html position={[0, 0, 0.015]} center transform distanceFactor={5.5}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14,
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 7.2,
+            color: '#94a3b8',
+            letterSpacing: '0.06em',
+            whiteSpace: 'nowrap',
+            padding: '2px 8px',
+            pointerEvents: 'none',
+            userSelect: 'none'
+          }}>
+            <span style={{ color: footType === 'healthy' ? '#14b8a6' : '#f59e0b', fontWeight: 700 }}>
+              {footType === 'healthy' ? '● ARCH: HEALTHY (HIGH VAULT)' : '▲ ARCH: COLLAPSED (PES PLANUS)'}
+            </span>
+            <span>ROT: {rotation >= 0 ? `+${rotation.toFixed(1)}°` : `${rotation.toFixed(1)}°`}</span>
+            <span>TILT: {tilt >= 0 ? `+${tilt.toFixed(1)}°` : `${tilt.toFixed(1)}°`}</span>
+            <span>LIFT: {height.toFixed(1)}mm</span>
+          </div>
+        </Html>
+      </group>
 
       {/* Corner Counterbore Socket Head Cap Screws */}
       {[-1.15, 1.15].map(x =>

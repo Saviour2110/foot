@@ -41,25 +41,15 @@ function Label({ position, text, color = '#14b8a6', subtext = '' }) {
   )
 }
 
-// Biomechanical Stylized Human Foot with Multi-Type Morphology Support
-function HumanFootModel({ showFoot = true, footType = 'healthy', showHotspots = true }) {
-  // Color palette for skin according to condition
-  const skinColor = useMemo(() => {
-    switch (footType) {
-      case 'diabetic': return '#d6a68f' // slightly pale
-      case 'drop_foot': return '#d0a492' // slightly hypotonic
-      case 'plantar_fasciitis': return '#e0b298'
-      case 'flat_foot': return '#e2b397'
-      case 'high_arch': return '#dcb095'
-      default: return '#e4b69c' // healthy warm skin
-    }
-  }, [footType])
+// Biomechanical Stylized Human Foot: Healthy Foot & Flat Foot (Pes Planus)
+function HumanFootModel({ showFoot = true, footType = 'healthy' }) {
+  const isFlat = footType === 'flat_foot'
 
   const skinMat = useMemo(() => new THREE.MeshStandardMaterial({
-    color: skinColor,
+    color: isFlat ? '#e2b397' : '#e4b69c',
     roughness: 0.62,
     metalness: 0.08,
-  }), [skinColor])
+  }), [isFlat])
 
   const sockMat = useMemo(() => new THREE.MeshStandardMaterial({
     color: '#0f766e', // clean medical teal compression sleeve
@@ -67,42 +57,19 @@ function HumanFootModel({ showFoot = true, footType = 'healthy', showHotspots = 
     metalness: 0.1,
   }), [])
 
-  // Ulcer risk hotspot material (for Diabetic foot)
-  const ulcerMat = useMemo(() => new THREE.MeshBasicMaterial({
-    color: '#ef4444',
-  }), [])
-
-  // Plantar fascia inflammation material
-  const fasciaMat = useMemo(() => new THREE.MeshBasicMaterial({
-    color: '#f97316',
-  }), [])
-
   if (!showFoot) return null
 
-  // Morphology deformations based on foot type:
-  // 1. Healthy: balanced arch
-  // 2. Flat foot (Pes Planus): collapsed arch, wider contact, medial pronation roll
-  // 3. High arch (Pes Cavus): elevated arch, clawed toes, hollow under midfoot
-  // 4. Drop foot: pronounced equinus drop (toes sag down)
-  // 5. Diabetic: normal shape with distinct high-pressure ulcer warning discs
-  // 6. Plantar fasciitis: normal shape with glowing inflamed calcaneal cord
-
-  const isFlat = footType === 'flat_foot'
-  const isHigh = footType === 'high_arch'
-  const isDrop = footType === 'drop_foot'
-  const isDiabetic = footType === 'diabetic'
-  const isFascia = footType === 'plantar_fasciitis'
-
-  // Midfoot arch coordinates & rotations
-  const midfootY = isFlat ? 0.045 : (isHigh ? 0.165 : 0.09)
-  const midfootRotZ = isFlat ? -0.01 : (isHigh ? -0.17 : (isDrop ? -0.18 : -0.06))
-  const midfootScaleY = isFlat ? 0.6 : (isHigh ? 1.35 : 1.0)
-  const midfootScaleZ = isFlat ? 1.18 : (isHigh ? 0.92 : 1.0)
-  const footRollX = isFlat ? 0.08 : (isHigh ? -0.06 : 0) // pronation vs supination
-  const dropSagZ = isDrop ? -0.22 : 0 // toe droop
+  // Morphology deformations:
+  // Healthy: Normal elevated medial arch (y=0.09, rotZ=-0.06)
+  // Flat Foot: Collapsed arch flat to bed (y=0.045), widened scale, pronation roll (rollX=0.08)
+  const midfootY = isFlat ? 0.045 : 0.09
+  const midfootRotZ = isFlat ? -0.01 : -0.06
+  const midfootScaleY = isFlat ? 0.6 : 1.0
+  const midfootScaleZ = isFlat ? 1.18 : 1.0
+  const footRollX = isFlat ? 0.08 : 0 // medial pronation roll
 
   return (
-    <group position={[0, 0.22, 0]} rotation={[footRollX, 0, dropSagZ]}>
+    <group position={[0, 0.22, 0]} rotation={[footRollX, 0, 0]}>
       {/* ===== LOWER LEG / TIBIA-FIBULA SEGMENT ===== */}
       <group position={[-0.32, 0.42, 0]}>
         {/* Calf / Lower leg cylinder */}
@@ -129,26 +96,6 @@ function HumanFootModel({ showFoot = true, footType = 'healthy', showHotspots = 
         <sphereGeometry args={[0.15, 16, 16]} />
       </mesh>
 
-      {/* Plantar Fasciitis: Inflamed Calcaneal Attachment Glow */}
-      {isFascia && showHotspots && (
-        <group position={[-0.34, 0.02, 0]}>
-          <mesh material={fasciaMat}>
-            <sphereGeometry args={[0.06, 12, 12]} />
-          </mesh>
-          {/* Tension band extending to ball of foot */}
-          <mesh position={[0.22, 0.01, 0]} rotation={[0, 0, -0.03]} material={fasciaMat}>
-            <boxGeometry args={[0.42, 0.015, 0.12]} />
-          </mesh>
-        </group>
-      )}
-
-      {/* Diabetic Neuropathy: Heel Ulcer Risk Spot */}
-      {isDiabetic && showHotspots && (
-        <mesh position={[-0.42, 0.01, 0]} material={ulcerMat}>
-          <cylinderGeometry args={[0.065, 0.065, 0.012, 16]} />
-        </mesh>
-      )}
-
       {/* ===== MIDFOOT / ARCH (TARSAL & METATARSAL) ===== */}
       <mesh
         material={skinMat}
@@ -165,20 +112,8 @@ function HumanFootModel({ showFoot = true, footType = 'healthy', showHotspots = 
         <boxGeometry args={[0.26, 0.13, 0.34]} />
       </mesh>
 
-      {/* Diabetic Neuropathy: 1st Metatarsal Head Ulcer Hotspot */}
-      {isDiabetic && showHotspots && (
-        <group position={[0.34, 0.01, 0.09]}>
-          <mesh material={ulcerMat}>
-            <cylinderGeometry args={[0.055, 0.055, 0.012, 16]} />
-          </mesh>
-        </group>
-      )}
-
       {/* ===== TOES SEGMENT ===== */}
-      <group
-        position={[0.52, 0.055, 0]}
-        rotation={isHigh ? [0, 0, -0.24] : [0, 0, 0]} // claw toes for high arch
-      >
+      <group position={[0.52, 0.055, 0]}>
         {/* Big toe */}
         <mesh material={skinMat} position={[0, 0, 0.11]} castShadow>
           <capsuleGeometry args={[0.042, 0.10, 8, 12]} />
@@ -201,7 +136,7 @@ function HumanFootModel({ showFoot = true, footType = 'healthy', showHotspots = 
         </mesh>
       </group>
 
-      {/* ===== ERGONOMIC BIO-RETENTION STRAPS ===== */}
+      {/* ===== ERGONOMIC RETENTION STRAPS ===== */}
       {/* Forefoot strap */}
       <mesh position={[0.18, 0.12, 0]}>
         <boxGeometry args={[0.12, 0.18, 0.38]} />
@@ -221,9 +156,8 @@ export default function MechanismScene({
   tilt = 0,
   height = 0,
   showFoot = true,
-  showLabels = true,
-  footType = 'healthy',
-  showHotspots = true
+  showLabels = false, // Default OFF
+  footType = 'healthy'
 }) {
   const groupRef = useRef()
 
@@ -249,7 +183,6 @@ export default function MechanismScene({
   }), [])
   const linkMat = useMetal('#475569', 0.85, 0.25)
   const accentTealMat = useMetal('#14b8a6', 0.75, 0.25)
-  const accentIndigoMat = useMetal('#6366f1', 0.75, 0.25)
   const accentAmberMat = useMetal('#f59e0b', 0.75, 0.25)
   const limitStopMat = useMetal('#ef4444', 0.8, 0.2)
 
@@ -475,11 +408,10 @@ export default function MechanismScene({
                 ))
               )}
 
-              {/* Stylized Human Foot Model with Morphology Support */}
+              {/* Human Foot Model: Healthy vs Flat Foot */}
               <HumanFootModel
                 showFoot={showFoot}
                 footType={footType}
-                showHotspots={showHotspots}
               />
 
               {showLabels && (

@@ -518,104 +518,6 @@ code, .mono {
 }
 
 /* =========================================================
-   BOTTOM-RIGHT: CLINICAL PATHOLOGY HUD
-   ========================================================= */
-.hud-clinical {
-  right: 20px;
-  width: 410px;
-}
-
-.clinical-badge {
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 12px;
-  border: 1px solid;
-  letter-spacing: 0.02em;
-}
-
-.clinical-desc-box {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.clinical-desc-text {
-  font-size: 0.76rem;
-  color: var(--text-secondary);
-  line-height: 1.45;
-}
-
-.clinical-pathology-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 7px;
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.03);
-  padding: 6px 9px;
-  border-radius: 6px;
-  line-height: 1.4;
-  border-left: 2px solid currentColor;
-}
-
-/* Telemetry Grid */
-.telemetry-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.tele-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  padding: 7px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.tele-metric-label {
-  font-size: 0.66rem;
-  color: var(--text-dark);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-weight: 600;
-}
-
-.tele-metric-value {
-  font-size: 0.75rem;
-  color: #ffffff;
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 500;
-}
-
-/* Therapy Action Button */
-.therapy-action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--btn-accent, var(--accent-teal));
-  color: #ffffff;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 9px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 0 14px rgba(0, 0, 0, 0.2);
-}
-
-.therapy-action-btn:hover {
-  background: var(--btn-accent, var(--accent-teal));
-  color: #ffffff;
-  box-shadow: 0 0 18px rgba(20, 184, 166, 0.35);
-}
-
-/* =========================================================
    RESPONSIVE DESIGN
    ========================================================= */
 @media (max-width: 1100px) {
@@ -624,19 +526,9 @@ code, .mono {
     padding: 10px 16px;
     flex-wrap: wrap;
   }
-  .foot-type-selector {
-    max-width: 100%;
-    order: 3;
-    width: 100%;
-  }
   .hud-kinematics {
     width: 320px;
     left: 12px;
-    bottom: 12px;
-  }
-  .hud-clinical {
-    width: 340px;
-    right: 12px;
     bottom: 12px;
   }
 }
@@ -648,7 +540,7 @@ code, .mono {
     overflow-y: auto;
   }
   .workspace-main {
-    height: 800px;
+    height: 700px;
   }
   .hud-panel {
     position: static;

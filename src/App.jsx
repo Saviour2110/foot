@@ -1,103 +1,30 @@
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei'
-import { motion, AnimatePresence } from 'framer-motion'
 import {
   RotateCw, ArrowUpDown, MoveVertical, Settings2,
-  Play, Pause, RotateCcw, Activity, ShieldCheck,
-  Eye, EyeOff, Sparkles, AlertCircle, Compass,
-  Layers, CheckCircle, Info, Stethoscope, ChevronRight, Zap
+  Play, Pause, RotateCcw,
+  Eye, EyeOff, Compass,
+  Layers, Stethoscope
 } from 'lucide-react'
 import MechanismScene from './components/MechanismScene'
 import './index.css'
 
 /* =========================================================
-   FOOT TYPES & PATHOLOGY DATA
+   FOOT TYPES (HEALTHY & FLAT FOOT)
    ========================================================= */
 const FOOT_PROFILES = {
   healthy: {
     id: 'healthy',
-    name: 'Healthy Normal Foot',
-    tag: 'Neutral Arch · Optimal Biomechanics',
+    name: 'Healthy Foot',
     badgeColor: '#14b8a6',
-    archIndex: '0.24 (Normal 0.21–0.26)',
-    peakPressure: '145 kPa (Normal distribution)',
-    pronationAngle: '0.0° Neutral',
-    clearance: '30 mm (Safe)',
-    description: 'Well-aligned medial longitudinal arch with uniform tripod plantar pressure distribution across calcaneus, 1st metatarsal, and 5th metatarsal heads.',
-    pathologyDetails: 'Intact plantar fascia and tibialis posterior tendon maintain spring ligament tension. Normal shock absorption and dynamic energy return during gait cycle.',
-    recommendedMotion: { rotation: 0, tilt: 0, height: 15 },
-    therapyLabel: 'Maintain Neutral Mobilization'
+    recommendedMotion: { rotation: 0, tilt: 0, height: 10 }
   },
   flat_foot: {
     id: 'flat_foot',
-    name: 'Flat Foot (Pes Planus)',
-    tag: 'Collapsed Arch · Hyperpronation',
+    name: 'Flat Foot',
     badgeColor: '#f59e0b',
-    archIndex: '0.36 (Elevated contact area)',
-    peakPressure: '280 kPa (Medial midfoot stress)',
-    pronationAngle: '+6.5° Medial Valgus',
-    clearance: '18 mm (Reduced)',
-    description: 'Medial longitudinal arch is collapsed flat against the platform bed. Accompanied by rearfoot valgus and midfoot abduction.',
-    pathologyDetails: 'Excessive elongation or insufficiency of the posterior tibial tendon. The foot remains overly flexible during stance phase, diminishing propulsive lever efficiency.',
-    recommendedMotion: { rotation: -6, tilt: 2, height: 18 },
-    therapyLabel: 'Support Medial Arch & Eversion Control'
-  },
-  high_arch: {
-    id: 'high_arch',
-    name: 'High Arch (Pes Cavus)',
-    tag: 'Rigid Cavus · Underpronation',
-    badgeColor: '#a855f7',
-    archIndex: '0.12 (Extremely reduced midfoot contact)',
-    peakPressure: '420 kPa (Focal on heel & metatarsals)',
-    pronationAngle: '-5.2° Lateral Supination',
-    clearance: '28 mm (Normal clearance, poor shock)',
-    description: 'Fixed elevation of the longitudinal arch with rigid tarsal joints and clawed toe contractures. Under-pronates during heel contact.',
-    pathologyDetails: 'Severely impaired shock attenuation. Ground reaction forces transmit directly into the ankle and knee joints, precipitating metatarsalgia and plantar fasciitis.',
-    recommendedMotion: { rotation: 4, tilt: -3, height: 12 },
-    therapyLabel: 'Gentle De-loading & Joint Mobilization'
-  },
-  diabetic: {
-    id: 'diabetic',
-    name: 'Diabetic Neuropathic Foot',
-    tag: 'Sensory Loss · High Ulcer Risk',
-    badgeColor: '#ef4444',
-    archIndex: '0.28 (Altered plantar morphology)',
-    peakPressure: '390 kPa (Critical ulcer threshold >200)',
-    pronationAngle: '+2.0° Stiff',
-    clearance: '15 mm (Impaired proprioception)',
-    description: 'Peripheral sensory neuropathy masks repetitive high-friction shear forces. Prominent bony prominences at 1st metatarsal and heel create ulceration hotspots.',
-    pathologyDetails: 'Limited joint mobility (cheiroarthropathy) and dry autonomic skin increase shear stress. Requires active automated pressure redistribution.',
-    recommendedMotion: { rotation: 0, tilt: 0, height: 10 },
-    therapyLabel: 'Apply Offloading & Pressure Redistribution'
-  },
-  drop_foot: {
-    id: 'drop_foot',
-    name: 'Drop Foot (Peroneal Palsy)',
-    tag: 'Flaccid Paralysis · Swing Drag',
-    badgeColor: '#f97316',
-    archIndex: '0.22 (Non-weight bearing sag)',
-    peakPressure: '310 kPa (Early toe impact slap)',
-    pronationAngle: '-3.0° Inversion bias',
-    clearance: '5 mm (Critical Fall Hazard)',
-    description: 'Weakness or paralysis of anterior compartment muscles (tibialis anterior). Inability to actively dorsiflex causes the toes to drag during swing phase.',
-    pathologyDetails: 'Steppage gait compensation observed. The mechanism provides vertical Z-elevation and dorsiflexion pitch to restore functional toe clearance.',
-    recommendedMotion: { rotation: 0, tilt: 8, height: 25 },
-    therapyLabel: 'Assisted Dorsiflexion & Z-Clearance Lift'
-  },
-  plantar_fasciitis: {
-    id: 'plantar_fasciitis',
-    name: 'Plantar Fasciitis',
-    tag: 'Aponeurosis Strain · Calcaneal Spur',
-    badgeColor: '#0ea5e9',
-    archIndex: '0.25 (Tense aponeurosis band)',
-    peakPressure: '360 kPa (Calcaneal tuberosity peak)',
-    pronationAngle: '+3.5° Pronation stress',
-    clearance: '22 mm (Pain-induced antalgic gait)',
-    description: 'Micro-tears and chronic inflammatory irritation at the medial calcaneal tuberosity where the thick plantar aponeurosis inserts.',
-    pathologyDetails: 'Exacerbated by tight Achilles tendon and repetitive impact shock. Controlled passive dorsiflexion pitch helps stretch and relieve fascial band tension.',
-    recommendedMotion: { rotation: 0, tilt: 6, height: 14 },
-    therapyLabel: 'Controlled Fascial Dorsiflexion Stretch'
+    recommendedMotion: { rotation: -4, tilt: 2, height: 12 }
   }
 }
 
@@ -115,16 +42,15 @@ const GAIT_PRESETS = [
 
 export default function App() {
   // Mechanism degrees of freedom state
-  const [rotation, setRotation] = useState(0) // -15 to +15 deg
-  const [tilt, setTilt] = useState(0)         // -10 to +10 deg
-  const [height, setHeight] = useState(10)    // 0 to 30 mm
+  const [rotation, setRotation] = useState(0) // -15 to +15 deg (Yaw)
+  const [tilt, setTilt] = useState(0)         // -10 to +10 deg (Pitch)
+  const [height, setHeight] = useState(10)    // 0 to 30 mm (Z-elevation)
 
-  // Visualization options
+  // Visualization options: Labels are OFF by default as requested
   const [showFoot, setShowFoot] = useState(true)
-  const [showLabels, setShowLabels] = useState(true)
-  const [showHotspots, setShowHotspots] = useState(true)
+  const [showLabels, setShowLabels] = useState(false)
 
-  // Foot morphology & clinical condition
+  // Foot morphology: Healthy vs Flat Foot
   const [selectedFootType, setSelectedFootType] = useState('healthy')
 
   // Animation state
@@ -148,13 +74,8 @@ export default function App() {
       const phase = (elapsed % cycleTime) / cycleTime // 0 to 1
 
       // Biomechanical gait cycle approximation
-      // Z-translation: rises to 26mm during push-off / swing, lowers to 4mm in midstance
       const newHeight = 15 + 11 * Math.sin(phase * Math.PI * 2)
-
-      // Tilt (Pitch): dorsiflexion (+8°) at heel strike, plantarflexion (-8°) at push-off
       const newTilt = 7 * Math.sin(phase * Math.PI * 2 + Math.PI / 4)
-
-      // Rotation (Yaw): slight internal/external tibial rotation (±6°)
       const newRot = 5 * Math.cos(phase * Math.PI * 2)
 
       setHeight(parseFloat(newHeight.toFixed(1)))
@@ -198,16 +119,6 @@ export default function App() {
     handleCameraChange('iso')
   }
 
-  // Apply clinical therapy motion
-  const applyTherapyMotion = (profile) => {
-    setAutoAnimate(false)
-    setRotation(profile.recommendedMotion.rotation)
-    setTilt(profile.recommendedMotion.tilt)
-    setHeight(profile.recommendedMotion.height)
-  }
-
-  const currentProfile = FOOT_PROFILES[selectedFootType] || FOOT_PROFILES.healthy
-
   return (
     <div className="single-page-app">
       {/* =========================================================
@@ -220,11 +131,11 @@ export default function App() {
           </div>
           <div className="brand-text">
             <h1>Foot Mechanics</h1>
-            <span className="brand-tag">3D Biomechanics &amp; Pathology Twin</span>
+            <span className="brand-tag">3D Kinematics Studio</span>
           </div>
         </div>
 
-        {/* Foot Condition Selector Tabs */}
+        {/* Foot Condition Selector: Healthy and Flat Foot only */}
         <div className="foot-type-selector">
           {Object.values(FOOT_PROFILES).map((item) => {
             const isSelected = selectedFootType === item.id
@@ -234,7 +145,10 @@ export default function App() {
                 className={`foot-tab-btn ${isSelected ? 'active' : ''}`}
                 onClick={() => {
                   setSelectedFootType(item.id)
-                  applyTherapyMotion(item)
+                  setAutoAnimate(false)
+                  setRotation(item.recommendedMotion.rotation)
+                  setTilt(item.recommendedMotion.tilt)
+                  setHeight(item.recommendedMotion.height)
                 }}
                 style={{
                   '--accent-color': item.badgeColor
@@ -258,25 +172,16 @@ export default function App() {
             title="Toggle Foot Model"
           >
             {showFoot ? <Eye size={15} /> : <EyeOff size={15} />}
-            <span>Foot</span>
+            <span>Foot: {showFoot ? 'ON' : 'OFF'}</span>
           </button>
 
           <button
             className={`header-tool-btn ${showLabels ? 'active' : ''}`}
             onClick={() => setShowLabels(!showLabels)}
-            title="Toggle 3D Labels"
+            title="Toggle 3D Labels (Default OFF)"
           >
             <Layers size={15} />
-            <span>Labels</span>
-          </button>
-
-          <button
-            className={`header-tool-btn ${showHotspots ? 'active' : ''}`}
-            onClick={() => setShowHotspots(!showHotspots)}
-            title="Toggle Clinical Hotspots"
-          >
-            <Zap size={15} />
-            <span>Hotspots</span>
+            <span>Labels: {showLabels ? 'ON' : 'OFF'}</span>
           </button>
 
           <button className="header-tool-btn reset" onClick={resetAll} title="Reset All">
@@ -311,7 +216,6 @@ export default function App() {
                 showFoot={showFoot}
                 showLabels={showLabels}
                 footType={selectedFootType}
-                showHotspots={showHotspots}
               />
               <ContactShadows
                 position={[0, -0.44, 0]}
@@ -505,70 +409,6 @@ export default function App() {
               ))}
             </div>
           </div>
-        </aside>
-
-        {/* =========================================================
-            BOTTOM RIGHT: CLINICAL PATHOLOGY & TELEMETRY HUD
-            ========================================================= */}
-        <aside className="hud-panel hud-clinical">
-          <div className="hud-header">
-            <div className="hud-title">
-              <Activity size={16} style={{ color: currentProfile.badgeColor }} />
-              <span>Biomechanical Diagnosis</span>
-            </div>
-            <span
-              className="clinical-badge"
-              style={{
-                color: currentProfile.badgeColor,
-                borderColor: `${currentProfile.badgeColor}50`,
-                backgroundColor: `${currentProfile.badgeColor}18`
-              }}
-            >
-              {currentProfile.name}
-            </span>
-          </div>
-
-          <div className="clinical-desc-box">
-            <p className="clinical-desc-text">{currentProfile.description}</p>
-            <div className="clinical-pathology-note">
-              <AlertCircle size={14} style={{ color: currentProfile.badgeColor, flexShrink: 0 }} />
-              <span>{currentProfile.pathologyDetails}</span>
-            </div>
-          </div>
-
-          {/* Biomechanical Telemetry Metrics Grid */}
-          <div className="telemetry-grid">
-            <div className="tele-card">
-              <span className="tele-metric-label">Arch Morphology</span>
-              <span className="tele-metric-value">{currentProfile.archIndex}</span>
-            </div>
-            <div className="tele-card">
-              <span className="tele-metric-label">Plantar Peak Stress</span>
-              <span className="tele-metric-value" style={{ color: currentProfile.badgeColor }}>
-                {currentProfile.peakPressure}
-              </span>
-            </div>
-            <div className="tele-card">
-              <span className="tele-metric-label">Dynamic Pronation</span>
-              <span className="tele-metric-value">{currentProfile.pronationAngle}</span>
-            </div>
-            <div className="tele-card">
-              <span className="tele-metric-label">Swing Clearance</span>
-              <span className="tele-metric-value">{currentProfile.clearance}</span>
-            </div>
-          </div>
-
-          {/* Clinical Therapeutic Preset Action */}
-          <button
-            className="therapy-action-btn"
-            style={{
-              '--btn-accent': currentProfile.badgeColor
-            }}
-            onClick={() => applyTherapyMotion(currentProfile)}
-          >
-            <Sparkles size={15} />
-            <span>Apply Therapy Position: {currentProfile.therapyLabel}</span>
-          </button>
         </aside>
       </main>
     </div>

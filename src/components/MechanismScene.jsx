@@ -1,9 +1,11 @@
-import { useRef, useMemo } from 'react'
+import { useRef, useMemo, Suspense } from 'react'
+import { useLoader } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
+import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import * as THREE from 'three'
 
-// Helper for realistic metallic materials
-function useMetal(color, metalness = 0.7, roughness = 0.3) {
+// Helper for photorealistic PBR metals
+function useMetal(color, metalness = 0.85, roughness = 0.25) {
   return useMemo(() => new THREE.MeshStandardMaterial({
     color,
     metalness,
@@ -16,7 +18,7 @@ function Label({ position, text, color = '#14b8a6', subtext = '' }) {
   return (
     <Html position={position} center distanceFactor={6.8}>
       <div style={{
-        background: 'rgba(11, 15, 23, 0.92)',
+        background: 'rgba(9, 13, 22, 0.92)',
         backdropFilter: 'blur(10px)',
         border: `1px solid ${color}70`,
         boxShadow: `0 4px 16px ${color}25`,
@@ -41,112 +43,57 @@ function Label({ position, text, color = '#14b8a6', subtext = '' }) {
   )
 }
 
-// Biomechanical Stylized Human Foot: Healthy Foot & Flat Foot (Pes Planus)
-function HumanFootModel({ showFoot = true, footType = 'healthy' }) {
+// Photorealistic Anatomical Human Foot (Loaded from 3D Scan Mesh)
+function AnatomicalFootMesh({ footType = 'healthy' }) {
   const isFlat = footType === 'flat_foot'
+  const modelUrl = isFlat ? '/models/human_foot_flat.stl' : '/models/human_foot.stl'
 
-  const skinMat = useMemo(() => new THREE.MeshStandardMaterial({
-    color: isFlat ? '#e2b397' : '#e4b69c',
-    roughness: 0.62,
-    metalness: 0.08,
-  }), [isFlat])
+  // Load real scanned human foot geometry
+  const geometry = useLoader(STLLoader, modelUrl)
 
-  const sockMat = useMemo(() => new THREE.MeshStandardMaterial({
-    color: '#0f766e', // clean medical teal compression sleeve
-    roughness: 0.7,
-    metalness: 0.1,
-  }), [])
-
-  if (!showFoot) return null
-
-  // Morphology deformations:
-  // Healthy: Normal elevated medial arch (y=0.09, rotZ=-0.06)
-  // Flat Foot: Collapsed arch flat to bed (y=0.045), widened scale, pronation roll (rollX=0.08)
-  const midfootY = isFlat ? 0.045 : 0.09
-  const midfootRotZ = isFlat ? -0.01 : -0.06
-  const midfootScaleY = isFlat ? 0.6 : 1.0
-  const midfootScaleZ = isFlat ? 1.18 : 1.0
-  const footRollX = isFlat ? 0.08 : 0 // medial pronation roll
+  // Realistic human skin material with subtle subsurface warmth and sheen
+  const skinMaterial = useMemo(() => {
+    return new THREE.MeshStandardMaterial({
+      color: isFlat ? '#e4b69d' : '#dfb095',
+      roughness: 0.52,
+      metalness: 0.04,
+    })
+  }, [isFlat])
 
   return (
-    <group position={[0, 0.22, 0]} rotation={[footRollX, 0, 0]}>
-      {/* ===== LOWER LEG / TIBIA-FIBULA SEGMENT ===== */}
-      <group position={[-0.32, 0.42, 0]}>
-        {/* Calf / Lower leg cylinder */}
-        <mesh material={skinMat} castShadow>
-          <cylinderGeometry args={[0.13, 0.10, 0.7, 16]} />
-        </mesh>
-
-        {/* Compression medical sleeve */}
-        <mesh material={sockMat} position={[0, 0.05, 0]}>
-          <cylinderGeometry args={[0.135, 0.115, 0.45, 16]} />
-        </mesh>
-
-        {/* Medial & Lateral Malleolus (Ankle bones) */}
-        <mesh material={skinMat} position={[0, -0.28, 0.11]}>
-          <sphereGeometry args={[0.045, 12, 12]} />
-        </mesh>
-        <mesh material={skinMat} position={[0, -0.26, -0.11]}>
-          <sphereGeometry args={[0.042, 12, 12]} />
-        </mesh>
-      </group>
-
-      {/* ===== HEEL (CALCANEUS) ===== */}
-      <mesh material={skinMat} position={[-0.42, 0.08, 0]} castShadow>
-        <sphereGeometry args={[0.15, 16, 16]} />
-      </mesh>
-
-      {/* ===== MIDFOOT / ARCH (TARSAL & METATARSAL) ===== */}
+    <group position={[0, 0, 0]}>
+      {/* Real anatomical foot mesh */}
       <mesh
-        material={skinMat}
-        position={[-0.05, midfootY, 0]}
-        rotation={[0, 0, midfootRotZ]}
-        scale={[1, midfootScaleY, midfootScaleZ]}
+        geometry={geometry}
+        material={skinMaterial}
         castShadow
-      >
-        <boxGeometry args={[0.62, 0.17, 0.32]} />
-      </mesh>
+        receiveShadow
+      />
 
-      {/* ===== FOREFOOT / BALL OF FOOT ===== */}
-      <mesh material={skinMat} position={[0.34, 0.07, 0]} castShadow>
-        <boxGeometry args={[0.26, 0.13, 0.34]} />
-      </mesh>
-
-      {/* ===== TOES SEGMENT ===== */}
-      <group position={[0.52, 0.055, 0]}>
-        {/* Big toe */}
-        <mesh material={skinMat} position={[0, 0, 0.11]} castShadow>
-          <capsuleGeometry args={[0.042, 0.10, 8, 12]} />
+      {/* Ergonomic Padded Compression Straps with Aluminum Buckles */}
+      {/* Forefoot strap */}
+      <group position={[0.22, 0.28, 0]}>
+        <mesh castShadow>
+          <boxGeometry args={[0.09, 0.14, 0.38]} />
+          <meshStandardMaterial color="#0f766e" roughness={0.6} />
         </mesh>
-        {/* Second toe */}
-        <mesh material={skinMat} position={[0.015, 0, 0.04]} castShadow>
-          <capsuleGeometry args={[0.036, 0.09, 8, 12]} />
-        </mesh>
-        {/* Third toe */}
-        <mesh material={skinMat} position={[0.005, 0, -0.03]} castShadow>
-          <capsuleGeometry args={[0.033, 0.08, 8, 12]} />
-        </mesh>
-        {/* Fourth toe */}
-        <mesh material={skinMat} position={[-0.01, 0, -0.09]} castShadow>
-          <capsuleGeometry args={[0.03, 0.07, 8, 12]} />
-        </mesh>
-        {/* Little toe */}
-        <mesh material={skinMat} position={[-0.025, 0, -0.14]} castShadow>
-          <capsuleGeometry args={[0.027, 0.06, 8, 12]} />
+        <mesh position={[0, 0.08, 0.16]}>
+          <boxGeometry args={[0.07, 0.03, 0.04]} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.2} />
         </mesh>
       </group>
 
-      {/* ===== ERGONOMIC RETENTION STRAPS ===== */}
-      {/* Forefoot strap */}
-      <mesh position={[0.18, 0.12, 0]}>
-        <boxGeometry args={[0.12, 0.18, 0.38]} />
-        <meshStandardMaterial color="#0d9488" roughness={0.4} />
-      </mesh>
       {/* Instep / Ankle strap */}
-      <mesh position={[-0.22, 0.22, 0]} rotation={[0, 0, 0.4]}>
-        <boxGeometry args={[0.11, 0.22, 0.35]} />
-        <meshStandardMaterial color="#0d9488" roughness={0.4} />
-      </mesh>
+      <group position={[-0.20, 0.38, 0]} rotation={[0, 0, 0.38]}>
+        <mesh castShadow>
+          <boxGeometry args={[0.09, 0.18, 0.36]} />
+          <meshStandardMaterial color="#0f766e" roughness={0.6} />
+        </mesh>
+        <mesh position={[0, 0.1, 0.15]}>
+          <boxGeometry args={[0.07, 0.03, 0.04]} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.2} />
+        </mesh>
+      </group>
     </group>
   )
 }
@@ -156,7 +103,7 @@ export default function MechanismScene({
   tilt = 0,
   height = 0,
   showFoot = true,
-  showLabels = false, // Default OFF
+  showLabels = false,
   footType = 'healthy'
 }) {
   const groupRef = useRef()
@@ -167,98 +114,137 @@ export default function MechanismScene({
   const heightNorm = height / 30 // 0 to 1 -> maps to 0.0 to 0.55 in scene units
   const verticalOffset = heightNorm * 0.55
 
-  // Clean, high-end materials with modern titanium and medical accents
-  const baseMat = useMetal('#111827', 0.85, 0.35)
-  const railMat = useMetal('#e2e8f0', 0.95, 0.15)
-  const leadScrewMat = useMetal('#94a3b8', 0.9, 0.25)
-  const carriageMat = useMetal('#1e293b', 0.8, 0.3)
-  const motorMat = useMetal('#0f172a', 0.7, 0.4)
-  const ringMat = useMetal('#d97706', 0.9, 0.2) // Bronze worm gear
-  const hingeMat = useMetal('#cbd5e1', 0.92, 0.18) // Precision stainless steel
-  const platformMat = useMetal('#1e293b', 0.75, 0.35)
-  const padMat = useMemo(() => new THREE.MeshStandardMaterial({
-    color: '#0f766e', // medical teal footbed cushion
-    roughness: 0.85,
+  // Precision Industrial & Aerospace Materials
+  const baseMat = useMetal('#0f172a', 0.88, 0.28)          // Anodized heavy tooling base
+  const chromeMat = useMetal('#f1f5f9', 0.98, 0.12)        // Hard-chrome mirror ground rods
+  const leadScrewMat = useMetal('#cbd5e1', 0.92, 0.22)     // Ground ball screw
+  const carriageMat = useMetal('#1e293b', 0.82, 0.26)      // CNC machined aluminum carriage
+  const motorMat = useMetal('#0b0f19', 0.65, 0.35)         // Stepper motor body
+  const motorFaceMat = useMetal('#64748b', 0.9, 0.2)       // Machined motor face
+  const couplerMat = useMetal('#38bdf8', 0.85, 0.2)        // Flexible beam coupler
+  const bronzeMat = useMetal('#d97706', 0.92, 0.18)        // Precision bronze worm wheel
+  const steelMat = useMetal('#94a3b8', 0.94, 0.16)         // Ground pivot pins & bolts
+  const rubberMat = useMemo(() => new THREE.MeshStandardMaterial({
+    color: '#090d16',
+    roughness: 0.92,
     metalness: 0.05
   }), [])
-  const linkMat = useMetal('#475569', 0.85, 0.25)
-  const accentTealMat = useMetal('#14b8a6', 0.75, 0.25)
-  const accentAmberMat = useMetal('#f59e0b', 0.75, 0.25)
-  const limitStopMat = useMetal('#ef4444', 0.8, 0.2)
+  const footbedPadMat = useMemo(() => new THREE.MeshStandardMaterial({
+    color: '#0d9488',
+    roughness: 0.75,
+    metalness: 0.08
+  }), [])
+  const trimTeal = useMetal('#14b8a6', 0.75, 0.25)
+  const trimAmber = useMetal('#f59e0b', 0.75, 0.25)
+  const limitStopMat = useMetal('#ef4444', 0.85, 0.2)
 
   return (
     <group ref={groupRef} position={[0, -0.32, 0]}>
       {/* =========================================================
-          STAGE 1: BASE FRAME & GROUND (Rigid Link 1)
+          STAGE 1: PRECISION TOOLING BASE FRAME (Rigid Link 1)
           ========================================================= */}
+      {/* Heavy Anodized Base Tooling Bed */}
       <mesh material={baseMat} position={[0, -0.06, 0]} castShadow receiveShadow>
         <boxGeometry args={[2.5, 0.12, 1.5]} />
       </mesh>
 
-      {/* Damper isolation foot pads */}
-      {[-1.1, 1.1].map(x =>
-        [-0.6, 0.6].map(z => (
-          <mesh key={`foot-${x}-${z}`} position={[x, -0.14, z]} castShadow>
-            <cylinderGeometry args={[0.07, 0.08, 0.05, 16]} />
-            <meshStandardMaterial color="#020617" roughness={0.9} />
-          </mesh>
+      {/* Perimeter CNC chamfer trim */}
+      <mesh material={trimTeal} position={[0, 0.005, 0]}>
+        <boxGeometry args={[2.52, 0.012, 1.52]} />
+      </mesh>
+
+      {/* Corner Counterbore Socket Head Cap Screws */}
+      {[-1.15, 1.15].map(x =>
+        [-0.65, 0.65].map(z => (
+          <group key={`screw-${x}-${z}`} position={[x, 0.01, z]}>
+            <mesh material={steelMat}>
+              <cylinderGeometry args={[0.024, 0.024, 0.015, 16]} />
+            </mesh>
+            <mesh material={motorMat} position={[0, 0.008, 0]}>
+              <cylinderGeometry args={[0.012, 0.012, 0.006, 6]} />
+            </mesh>
+          </group>
         ))
       )}
 
-      {/* Perimeter accent trim */}
-      <mesh material={accentTealMat} position={[0, 0.01, 0]}>
-        <boxGeometry args={[2.52, 0.01, 1.52]} />
-      </mesh>
+      {/* Heavy-Duty Industrial Leveling Damper Mounts */}
+      {[-1.1, 1.1].map(x =>
+        [-0.6, 0.6].map(z => (
+          <group key={`leveler-${x}-${z}`} position={[x, -0.14, z]}>
+            {/* Rubber shock pad */}
+            <mesh material={rubberMat} castShadow>
+              <cylinderGeometry args={[0.08, 0.09, 0.05, 20]} />
+            </mesh>
+            {/* Knurled leveling steel nut */}
+            <mesh material={steelMat} position={[0, 0.035, 0]}>
+              <cylinderGeometry args={[0.045, 0.045, 0.025, 16]} />
+            </mesh>
+          </group>
+        ))
+      )}
 
-      {/* Vertical Stepper Motor */}
+      {/* Stepper Motor Drive for Vertical Actuation */}
       <group position={[0, 0.12, -0.55]}>
+        {/* Motor square body with heatsink fins */}
         <mesh material={motorMat} castShadow>
-          <boxGeometry args={[0.22, 0.24, 0.22]} />
+          <boxGeometry args={[0.24, 0.24, 0.24]} />
         </mesh>
-        <mesh material={accentTealMat} position={[0, 0.14, 0]}>
-          <cylinderGeometry args={[0.03, 0.03, 0.06, 12]} />
+        {/* Front aluminum mounting flange */}
+        <mesh material={motorFaceMat} position={[0, 0.125, 0]}>
+          <boxGeometry args={[0.245, 0.01, 0.245]} />
+        </mesh>
+        {/* Blue flexible helical shaft coupler */}
+        <mesh material={couplerMat} position={[0, 0.18, 0]}>
+          <cylinderGeometry args={[0.032, 0.032, 0.08, 16]} />
         </mesh>
       </group>
 
-      {/* Center Lead Screw for Z-Translation */}
-      <mesh material={leadScrewMat} position={[0, 0.45, -0.55]} castShadow>
-        <cylinderGeometry args={[0.022, 0.022, 0.8, 16]} />
+      {/* Center Precision Ground Ball Screw */}
+      <mesh material={leadScrewMat} position={[0, 0.48, -0.55]} castShadow>
+        <cylinderGeometry args={[0.022, 0.022, 0.82, 20]} />
       </mesh>
 
-      {/* Dual Precision Guide Rails */}
-      <mesh material={railMat} position={[-0.9, 0.52, 0]} castShadow>
-        <cylinderGeometry args={[0.035, 0.035, 1.05, 16]} />
+      {/* Dual Mirror Chrome Guide Shafts */}
+      <mesh material={chromeMat} position={[-0.9, 0.52, 0]} castShadow>
+        <cylinderGeometry args={[0.036, 0.036, 1.05, 24]} />
       </mesh>
-      <mesh material={railMat} position={[0.9, 0.52, 0]} castShadow>
-        <cylinderGeometry args={[0.035, 0.035, 1.05, 16]} />
+      <mesh material={chromeMat} position={[0.9, 0.52, 0]} castShadow>
+        <cylinderGeometry args={[0.036, 0.036, 1.05, 24]} />
       </mesh>
 
-      {/* Guide Rail Mounts */}
+      {/* Top Shaft Clamping Blocks */}
       {[-0.9, 0.9].map(x => (
-        <mesh key={`top-block-${x}`} material={carriageMat} position={[x, 1.04, 0]} castShadow>
-          <boxGeometry args={[0.14, 0.05, 0.14]} />
-        </mesh>
+        <group key={`top-block-${x}`} position={[x, 1.04, 0]}>
+          <mesh material={carriageMat} castShadow>
+            <boxGeometry args={[0.15, 0.05, 0.15]} />
+          </mesh>
+          <mesh material={steelMat} position={[0, 0.028, 0]}>
+            <cylinderGeometry args={[0.016, 0.016, 0.01, 12]} />
+          </mesh>
+        </group>
       ))}
+
+      {/* Bottom Shaft Flange Blocks */}
       {[-0.9, 0.9].map(x => (
         <mesh key={`bot-block-${x}`} material={carriageMat} position={[x, 0.02, 0]} castShadow>
-          <boxGeometry args={[0.15, 0.05, 0.15]} />
+          <boxGeometry args={[0.16, 0.05, 0.16]} />
         </mesh>
       ))}
 
       {showLabels && (
         <Label
           position={[0, -0.22, 0.95]}
-          text="LINK 1: BASE FRAME"
-          subtext="Rigid Medical-Grade Bed"
+          text="LINK 1: RIGID BED FRAME"
+          subtext="Precision Anodized Tooling Plate"
           color="#94a3b8"
         />
       )}
 
       {showLabels && (
         <Label
-          position={[-1.22, 0.52, 0]}
-          text="JOINT 1: PRISMATIC (Z)"
-          subtext="0–30 mm Linear Stroke"
+          position={[-1.24, 0.52, 0]}
+          text="JOINT 1: PRISMATIC Z-AXIS"
+          subtext="0–30 mm Linear Ground Stroke"
           color="#14b8a6"
         />
       )}
@@ -267,51 +253,61 @@ export default function MechanismScene({
           STAGE 2: VERTICAL SLIDER CARRIAGE (Rigid Link 2)
           ========================================================= */}
       <group position={[0, 0.16 + verticalOffset, 0]}>
-        {/* Carriage Bed */}
+        {/* Solid CNC Carriage Bed */}
         <mesh material={carriageMat} castShadow receiveShadow>
           <boxGeometry args={[1.96, 0.09, 1.2]} />
         </mesh>
 
-        {/* Linear Bushings */}
+        {/* Linear Ball Bushing Pillow Blocks with Dust Seals */}
         {[-0.9, 0.9].map(x => (
-          <mesh key={`bushing-${x}`} material={hingeMat} position={[x, 0, 0]} castShadow>
-            <cylinderGeometry args={[0.065, 0.065, 0.14, 16]} />
-          </mesh>
+          <group key={`bushing-${x}`} position={[x, 0, 0]}>
+            <mesh material={carriageMat} castShadow>
+              <boxGeometry args={[0.16, 0.12, 0.18]} />
+            </mesh>
+            <mesh material={rubberMat} position={[0, 0.065, 0]}>
+              <cylinderGeometry args={[0.045, 0.045, 0.015, 16]} />
+            </mesh>
+            <mesh material={rubberMat} position={[0, -0.065, 0]}>
+              <cylinderGeometry args={[0.045, 0.045, 0.015, 16]} />
+            </mesh>
+          </group>
         ))}
 
-        {/* Lead Screw Anti-Backlash Drive Nut */}
-        <mesh material={ringMat} position={[0, 0, -0.55]} castShadow>
-          <cylinderGeometry args={[0.05, 0.05, 0.1, 16]} />
-        </mesh>
+        {/* Lead Screw Anti-Backlash Drive Nut Housing */}
+        <group position={[0, 0, -0.55]}>
+          <mesh material={bronzeMat} castShadow>
+            <cylinderGeometry args={[0.052, 0.052, 0.11, 20]} />
+          </mesh>
+          <mesh material={steelMat} position={[0, 0.06, 0]}>
+            <cylinderGeometry args={[0.07, 0.07, 0.015, 16]} />
+          </mesh>
+        </group>
 
-        {/* Carriage Elevation Indicators */}
-        <mesh material={accentTealMat} position={[1.05, 0, 0]}>
-          <coneGeometry args={[0.045, 0.09, 8]} />
-        </mesh>
-        <mesh material={accentTealMat} position={[1.05, -0.12, 0]} rotation={[Math.PI, 0, 0]}>
-          <coneGeometry args={[0.045, 0.09, 8]} />
+        {/* Elevation Scale Pointer */}
+        <mesh material={trimTeal} position={[1.04, 0, 0]}>
+          <coneGeometry args={[0.04, 0.08, 8]} />
         </mesh>
 
         {/* =========================================================
-            STAGE 3: REVOLUTE TURNTABLE (Joint 2 - Axial Yaw)
+            STAGE 3: REVOLUTE TURNTABLE & WORM DRIVE (Joint 2 - Yaw)
             ========================================================= */}
         <group rotation={[0, rotRad, 0]}>
-          {/* Turntable Bearing Ring */}
-          <mesh material={ringMat} position={[0, 0.08, 0]} castShadow>
-            <torusGeometry args={[0.38, 0.042, 16, 36]} />
+          {/* Precision Bronze Worm Gear Wheel with Beveled Teeth Rim */}
+          <mesh material={bronzeMat} position={[0, 0.08, 0]} castShadow>
+            <cylinderGeometry args={[0.38, 0.38, 0.04, 36]} />
           </mesh>
 
-          {/* Turntable Core Hub */}
-          <mesh material={carriageMat} position={[0, 0.09, 0]} castShadow>
-            <cylinderGeometry args={[0.35, 0.35, 0.05, 32]} />
+          {/* Turntable Core Pivot Hub */}
+          <mesh material={carriageMat} position={[0, 0.095, 0]} castShadow>
+            <cylinderGeometry args={[0.34, 0.34, 0.05, 32]} />
           </mesh>
 
-          {/* Kingpin Pivot Axle */}
-          <mesh material={hingeMat} position={[0, 0.12, 0]}>
-            <cylinderGeometry args={[0.035, 0.035, 0.12, 16]} />
+          {/* Central Kingpin Shaft */}
+          <mesh material={steelMat} position={[0, 0.12, 0]}>
+            <cylinderGeometry args={[0.036, 0.036, 0.12, 20]} />
           </mesh>
 
-          {/* Safety Limit Stops at ±15° */}
+          {/* Mechanical Hard Travel Safety Stops at ±15° */}
           <mesh material={limitStopMat} position={[-0.38 * Math.cos(Math.PI / 12), 0.1, -0.38 * Math.sin(Math.PI / 12)]}>
             <boxGeometry args={[0.04, 0.05, 0.04]} />
           </mesh>
@@ -322,103 +318,111 @@ export default function MechanismScene({
           {showLabels && (
             <Label
               position={[0.68, 0.12, 0]}
-              text="JOINT 2: REVOLUTE (YAW)"
-              subtext="±15° Inversion / Eversion"
+              text="JOINT 2: REVOLUTE TURNTABLE"
+              subtext="±15° Axial Inversion / Eversion"
               color="#6366f1"
             />
           )}
 
-          {/* Stanchion Supports */}
-          <mesh material={linkMat} position={[-0.26, 0.24, 0]} castShadow>
-            <cylinderGeometry args={[0.02, 0.02, 0.26, 12]} />
-          </mesh>
-          <mesh material={linkMat} position={[0.26, 0.24, 0]} castShadow>
-            <cylinderGeometry args={[0.02, 0.02, 0.26, 12]} />
-          </mesh>
+          {/* Stanchion Support Pillars */}
+          {[-0.26, 0.26].map(x => (
+            <mesh key={`stanchion-${x}`} material={carriageMat} position={[x, 0.24, 0]} castShadow>
+              <boxGeometry args={[0.08, 0.26, 0.09]} />
+            </mesh>
+          ))}
 
           {/* =========================================================
               STAGE 4: HORIZONTAL HINGE JOINT (Joint 3 - Pitch)
               ========================================================= */}
           <group position={[0, 0.38, 0]}>
-            {/* Hinge Pin Axle */}
-            <mesh material={hingeMat} rotation={[0, 0, Math.PI / 2]} castShadow>
-              <cylinderGeometry args={[0.026, 0.026, 0.64, 16]} />
+            {/* Precision Ground Hinge Pin Axle */}
+            <mesh material={steelMat} rotation={[0, 0, Math.PI / 2]} castShadow>
+              <cylinderGeometry args={[0.026, 0.026, 0.66, 20]} />
             </mesh>
 
-            {/* Pillow Block Bearings */}
+            {/* Pillow Block Bearings with Lubrication Grease Nipples */}
             {[-0.26, 0.26].map(x => (
-              <mesh key={`hinge-block-${x}`} material={carriageMat} position={[x, 0, 0]} castShadow>
-                <boxGeometry args={[0.08, 0.09, 0.11]} />
-              </mesh>
+              <group key={`hinge-bearing-${x}`} position={[x, 0, 0]}>
+                <mesh material={carriageMat} castShadow>
+                  <boxGeometry args={[0.09, 0.10, 0.12]} />
+                </mesh>
+                <mesh material={bronzeMat} position={[0, 0.055, 0]}>
+                  <cylinderGeometry args={[0.008, 0.008, 0.015, 8]} />
+                </mesh>
+              </group>
             ))}
 
-            {/* Hinge Ring Accents */}
+            {/* Hinge Joint Accents */}
             {[-0.26, 0.26].map(x => (
-              <mesh key={`hinge-ring-${x}`} material={accentAmberMat} position={[x, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-                <torusGeometry args={[0.044, 0.009, 12, 20]} />
+              <mesh key={`hinge-ring-${x}`} material={trimAmber} position={[x, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+                <torusGeometry args={[0.042, 0.008, 12, 24]} />
               </mesh>
             ))}
 
             {showLabels && (
               <Label
                 position={[0.62, 0, 0]}
-                text="JOINT 3: HINGE (PITCH)"
-                subtext="±10° Dorsi / Plantarflexion"
+                text="JOINT 3: HINGE PIN"
+                subtext="±10° Sagittal Dorsi / Plantarflexion"
                 color="#f59e0b"
               />
             )}
 
             {/* =========================================================
-                STAGE 5: TILTING FOOT PLATFORM (Rigid Link 4)
+                STAGE 5: TILTING FOOTBED PLATFORM (Rigid Link 4)
                 ========================================================= */}
             <group rotation={[tiltRad, 0, 0]}>
               {/* Twin Transfer Struts */}
               {[-0.18, 0.18].map(x => (
-                <mesh key={`link-strut-${x}`} material={linkMat} position={[x, 0.09, 0]} castShadow>
-                  <cylinderGeometry args={[0.016, 0.016, 0.14, 12]} />
+                <mesh key={`link-strut-${x}`} material={steelMat} position={[x, 0.09, 0]} castShadow>
+                  <cylinderGeometry args={[0.016, 0.016, 0.14, 16]} />
                 </mesh>
               ))}
 
               {/* Main Structural Foot Platform Bed */}
-              <mesh material={platformMat} position={[0, 0.17, 0]} castShadow receiveShadow>
+              <mesh material={carriageMat} position={[0, 0.17, 0]} castShadow receiveShadow>
                 <boxGeometry args={[1.72, 0.065, 0.92]} />
               </mesh>
 
-              {/* Ergonomic Cushion Pad */}
-              <mesh material={padMat} position={[0, 0.205, 0]} receiveShadow>
+              {/* Silicone High-Traction Ergonomic Footbed Pad */}
+              <mesh material={footbedPadMat} position={[0, 0.205, 0]} receiveShadow>
                 <boxGeometry args={[1.65, 0.012, 0.85]} />
               </mesh>
 
-              {/* Platform Trim Accent */}
-              <mesh material={accentTealMat} position={[0, 0.198, 0]}>
+              {/* Platform Bevel Perimeter Trim */}
+              <mesh material={trimTeal} position={[0, 0.198, 0]}>
                 <boxGeometry args={[1.73, 0.004, 0.93]} />
               </mesh>
 
-              {/* Heel Cup Guard */}
-              <mesh material={carriageMat} position={[-0.72, 0.27, 0]} castShadow>
-                <boxGeometry args={[0.08, 0.14, 0.52]} />
+              {/* Anatomical Heel Stop Guard */}
+              <mesh material={carriageMat} position={[-0.72, 0.28, 0]} castShadow>
+                <boxGeometry args={[0.08, 0.15, 0.52]} />
+              </mesh>
+              <mesh material={rubberMat} position={[-0.675, 0.28, 0]}>
+                <boxGeometry args={[0.015, 0.13, 0.48]} />
               </mesh>
 
-              {/* Restraint Strap Anchor Mounts */}
+              {/* Stainless Steel Strap Anchor Buckles */}
               {[-0.5, 0.2].map(x =>
                 [-0.43, 0.43].map(z => (
-                  <mesh key={`buckle-${x}-${z}`} material={hingeMat} position={[x, 0.22, z]} castShadow>
+                  <mesh key={`buckle-${x}-${z}`} material={steelMat} position={[x, 0.22, z]} castShadow>
                     <boxGeometry args={[0.08, 0.04, 0.04]} />
                   </mesh>
                 ))
               )}
 
-              {/* Human Foot Model: Healthy vs Flat Foot */}
-              <HumanFootModel
-                showFoot={showFoot}
-                footType={footType}
-              />
+              {/* REALISTIC SCANNED ANATOMICAL HUMAN FOOT MODEL */}
+              {showFoot && (
+                <Suspense fallback={null}>
+                  <AnatomicalFootMesh footType={footType} />
+                </Suspense>
+              )}
 
               {showLabels && (
                 <Label
-                  position={[0, 0.56, 0]}
-                  text="LINK 4: FOOT PLATFORM"
-                  subtext="Ergonomic Multi-Axis Support"
+                  position={[0, 0.58, 0]}
+                  text="LINK 4: FOOTBED PLATFORM"
+                  subtext="Ergonomic Biomechanical Restraint"
                   color="#14b8a6"
                 />
               )}

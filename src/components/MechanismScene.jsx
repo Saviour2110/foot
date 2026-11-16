@@ -234,8 +234,8 @@ export default function MechanismScene({
       {showLabels && (
         <Label
           position={[0, -0.22, 0.95]}
-          text="LINK 1: RIGID BED FRAME"
-          subtext="Precision Anodized Tooling Plate"
+          text="BASE STAND"
+          subtext="Solid metal foundation plate"
           color="#94a3b8"
         />
       )}
@@ -243,8 +243,8 @@ export default function MechanismScene({
       {showLabels && (
         <Label
           position={[-1.24, 0.52, 0]}
-          text="JOINT 1: PRISMATIC Z-AXIS"
-          subtext="0–30 mm Linear Ground Stroke"
+          text="HEIGHT LIFT MOTOR"
+          subtext="Moves up & down (0–30 mm)"
           color="#14b8a6"
         />
       )}
@@ -318,8 +318,8 @@ export default function MechanismScene({
           {showLabels && (
             <Label
               position={[0.68, 0.12, 0]}
-              text="JOINT 2: REVOLUTE TURNTABLE"
-              subtext="±15° Axial Inversion / Eversion"
+              text="ROTATION MOTOR"
+              subtext="Turns left & right (±15°)"
               color="#6366f1"
             />
           )}
@@ -362,8 +362,8 @@ export default function MechanismScene({
             {showLabels && (
               <Label
                 position={[0.62, 0, 0]}
-                text="JOINT 3: HINGE PIN"
-                subtext="±10° Sagittal Dorsi / Plantarflexion"
+                text="TILT HINGE"
+                subtext="Tilts foot up & down (±10°)"
                 color="#f59e0b"
               />
             )}
@@ -421,8 +421,8 @@ export default function MechanismScene({
               {showLabels && (
                 <Label
                   position={[0, 0.58, 0]}
-                  text="LINK 4: FOOTBED PLATFORM"
-                  subtext="Ergonomic Biomechanical Restraint"
+                  text="FOOT REST PLATFORM"
+                  subtext="Padded base with safety straps"
                   color="#14b8a6"
                 />
               )}
